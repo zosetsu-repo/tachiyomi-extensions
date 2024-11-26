@@ -670,7 +670,7 @@ Komikku directly at the Browse panel:
 If you're running a Preview or debug build of Komikku:
 
 ```
--W -S -n app.komikku.debug/eu.kanade.tachiyomi.ui.main.MainActivity -a eu.kanade.tachiyomi.SHOW_CATALOGUES
+-W -S -n app.komikku.dev/eu.kanade.tachiyomi.ui.main.MainActivity -a eu.kanade.tachiyomi.SHOW_CATALOGUES
 ```
 
 And for a release build of Komikku:
