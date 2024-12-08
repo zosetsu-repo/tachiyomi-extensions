@@ -4,19 +4,20 @@ import android.util.Base64
 import eu.kanade.tachiyomi.multisrc.heancms.HeanCms
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.asObservableSuccess
-import eu.kanade.tachiyomi.network.interceptor.rateLimitHost
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
-import okhttp3.HttpUrl.Companion.toHttpUrl
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.Request
 import okhttp3.Response
 import rx.Observable
 
 class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
-
-    override val client = super.client.newBuilder()
-        .rateLimitHost(apiUrl.toHttpUrl(), 1)
-        .build()
 
     // Site changed from MangaThemesia to HeanCms.
     override val versionId = 2
@@ -39,20 +40,46 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
             .parseAs<GitHubResponse>()
             .tree.map { it.path }
             .filter { it.endsWith(".json") }
-            .associateBy { it.substringBeforeLast(".json").lowercase() }
     }
 
-    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> {
-        val chapters = client.newCall(chapterListRequest(manga)).execute()
-            .use(::chapterListParse)
-            .toMutableList()
+    private fun getClosest(title: String): String =
+        cubariList.minByOrNull {
+            editDistance(it.substringBeforeLast(".json").lowercase(), title.lowercase())
+        }!!
 
-        val seenChapters = HashSet<Float>()
-        seenChapters.addAll(chapters.map { it.chapter_number })
+    private fun editDistance(s1: String, s2: String): Int {
+        val m = s1.length
+        val n = s2.length
+        var prev: Int
+        val curr = IntArray(n + 1)
 
-        val cubariChapters = run {
-            val jsonFile = cubariList[manga.title.lowercase()]
-                ?: return Observable.just(chapters)
+        for (j in 0..n) curr[j] = j
+
+        for (i in 1..m) {
+            prev = curr[0]
+            curr[0] = i
+            for (j in 1..n) {
+                val temp = curr[j]
+                if (s1[i - 1] == s2[j - 1]) {
+                    curr[j] = prev
+                } else {
+                    curr[j] = 1 + minOf(curr[j - 1], prev, curr[j])
+                }
+                prev = temp
+            }
+        }
+
+        return curr[n]
+    }
+
+    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = runBlocking {
+        val primaryChaptersDeferred = async {
+            client.newCall(chapterListRequest(manga)).execute()
+                .use(::chapterListParse)
+        }
+
+        val cubariChaptersDeferred = async {
+            val jsonFile = getClosest(manga.title)
 
             val cubariId = Base64.encodeToString(
                 "raw/Laicht/images/master/$jsonFile".toByteArray(),
@@ -66,7 +93,12 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
                 .parseAs<CubariChaptersResponse>()
         }
 
-        cubariChapters.chapters.entries.forEach { (num, chap) ->
+        val chapters = primaryChaptersDeferred.await().toMutableList()
+        val cubariChapters = cubariChaptersDeferred.await()
+
+        val seenChapters = HashSet<Float>()
+        seenChapters.addAll(chapters.map { it.chapter_number })
+        cubariChapters.chapters.toSortedMap().entries.forEach { (num, chap) ->
             val number = num.toFloat()
             if (number !in seenChapters) {
                 val chapter = SChapter.create().apply {
@@ -75,6 +107,7 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
                         .removeSuffix("/")
                         .plus("/")
                     name = "Chapter $num"
+                    chapter_number = number
                     scanlator = "Early Access"
                     date_upload = chap.release_date["0"]!! * 1000
                 }
@@ -84,7 +117,7 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
             }
         }
 
-        return Observable.just(chapters)
+        Observable.just(chapters)
     }
 
     override fun chapterListParse(response: Response): List<SChapter> {
@@ -107,11 +140,25 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
         return client.newCall(GET(chapter.url, cubariHeaders))
             .asObservableSuccess()
             .map { response ->
-                response.parseAs<List<String>>().map {
-                    Page(0, imageUrl = it)
+                response.parseAs<List<JsonElement>>().map {
+                    val page = if (it is JsonObject) {
+                        it.jsonObject["src"]!!.jsonPrimitive.content
+                    } else {
+                        it.jsonPrimitive.content
+                    }
+
+                    Page(0, imageUrl = "$page#cubari")
                 }
             }
     }
+
+    override fun imageRequest(page: Page): Request {
+        return if (page.imageUrl!!.endsWith("#cubari")) {
+            GET(page.imageUrl!!, cubariHeaders)
+        } else {
+            super.imageRequest(page)
+        }
+    }
 }
 
-private val CHAP_NUM_REGEX = Regex("""\d+.?\d+$""")
+private val CHAP_NUM_REGEX = Regex("""\d+(\.\d+)?""")
