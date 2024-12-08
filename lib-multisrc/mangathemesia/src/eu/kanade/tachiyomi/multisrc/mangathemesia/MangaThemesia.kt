@@ -292,7 +292,7 @@ abstract class MangaThemesia(
         listOf("canceled", "cancelled", "cancelado", "cancellato", "cancelados", "dropped", "discontinued", "abandonné")
             .any { this.contains(it, ignoreCase = true) } -> SManga.CANCELLED
 
-        listOf("hiatus", "on hold", "pausado", "en espera", "en pause", "en attente")
+        listOf("hiatus", "on hold", "pausado", "en espera", "en pause", "en attente", "hiato")
             .any { this.contains(it, ignoreCase = true) } -> SManga.ON_HIATUS
 
         else -> SManga.UNKNOWN
@@ -490,8 +490,8 @@ abstract class MangaThemesia(
         Pair(intl["order_by_filter_popular"], "popular"),
     )
 
-    protected val popularFilter by lazy { FilterList(OrderByFilter("", orderByFilterOptions, "popular")) }
-    protected val latestFilter by lazy { FilterList(OrderByFilter("", orderByFilterOptions, "update")) }
+    protected open val popularFilter by lazy { FilterList(OrderByFilter("", orderByFilterOptions, "popular")) }
+    protected open val latestFilter by lazy { FilterList(OrderByFilter("", orderByFilterOptions, "update")) }
 
     protected class ProjectFilter(
         name: String,
@@ -603,7 +603,7 @@ abstract class MangaThemesia(
             (!strict && url.pathSegments.size == n + 1 && url.pathSegments[n].isEmpty())
     }
 
-    private fun parseGenres(document: Document): List<GenreData>? {
+    protected open fun parseGenres(document: Document): List<GenreData>? {
         return document.selectFirst("ul.genrez")?.select("li")?.map { li ->
             GenreData(
                 li.selectFirst("label")!!.text(),

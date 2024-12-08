@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 
 class DrakeScans : MangaThemesia(
     "Drake Scans",
-    "https://drake-scans.com",
+    "https://drakecomic.org",
     "en",
 ) {
     // madara -> mangathemesia

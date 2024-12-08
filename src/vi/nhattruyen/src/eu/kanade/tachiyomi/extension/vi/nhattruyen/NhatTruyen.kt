@@ -15,12 +15,12 @@ import java.util.Locale
 
 class NhatTruyen : WPComics(
     "NhatTruyen",
-    "https://nhattruyenup.com",
+    "https://nhattruyenv.com",
     "vi",
     dateFormat = SimpleDateFormat("dd/MM/yy", Locale.getDefault()),
     gmtOffset = null,
 ) {
-    override val searchPath = "the-loai"
+    override val searchPath = "tim-truyen"
 
     /**
      * NetTruyen/NhatTruyen redirect back to catalog page if searching query is not found.

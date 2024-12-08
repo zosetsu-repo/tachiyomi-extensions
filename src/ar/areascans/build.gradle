@@ -3,7 +3,7 @@ ext {
     extClass = '.AreaScans'
     themePkg = 'mangathemesia'
     baseUrl = 'https://ar.areascans.org'
-    overrideVersionCode = 0
+    overrideVersionCode = 2
 }
 
 apply from: "$rootDir/common.gradle"

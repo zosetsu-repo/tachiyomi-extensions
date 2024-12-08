@@ -7,21 +7,23 @@ import java.util.Locale
 
 class ThunderScansFactory : SourceFactory {
     override fun createSources() = listOf(
-        ThunderScansAR(),
-        ThunderScansEN(),
+        LavaScans(),
+        ThunderScans(),
     )
 }
 
-class ThunderScansAR : MangaThemesiaAlt(
-    "Thunder Scans",
-    "https://ar-thunderepic.com",
+class LavaScans : MangaThemesiaAlt(
+    "Lava Scans",
+    "https://lavatoons.com",
     "ar",
     dateFormat = SimpleDateFormat("MMM d, yyy", Locale("ar")),
-)
+) {
+    override val id = 3209001028102012989
+}
 
-class ThunderScansEN : MangaThemesiaAlt(
+class ThunderScans : MangaThemesiaAlt(
     "Thunder Scans",
-    "https://en-thunderepic.com",
+    "https://en-thunderscans.com",
     "en",
     mangaUrlDirectory = "/comics",
 )

@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.extension.ru.allhentai
 
 import android.app.Application
-import android.content.SharedPreferences
 import android.widget.Toast
 import androidx.preference.EditTextPreference
 import eu.kanade.tachiyomi.multisrc.grouple.GroupLe
@@ -9,19 +8,26 @@ import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 import okhttp3.Request
+import org.jsoup.nodes.Document
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class AllHentai : GroupLe("AllHentai", "https://z.ahen.me", "ru") {
+    override val id = 1809051393403180443
 
-    override val id: Long = 1809051393403180443
+    private val preferences = Injekt.get<Application>().getSharedPreferences("source_$id", 0x0000)
 
-    private val preferences: SharedPreferences by lazy {
-        Injekt.get<Application>().getSharedPreferences("source_$id", 0x0000)
+    override val baseUrl by lazy { getPrefBaseUrl() }
+
+    override fun getChapterSearchParams(document: Document): String {
+        val html = document.html()
+
+        val userHashRegex = "user_hash.+'(.+)'".toRegex()
+
+        val userHash = userHashRegex.find(html)?.groupValues?.get(1)
+
+        return userHash?.let { "?d=$it" } ?: ""
     }
-
-    private var domain: String = preferences.getString(DOMAIN_TITLE, DOMAIN_DEFAULT)!!
-    override val baseUrl: String = domain
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val url = super.searchMangaRequest(page, query, filters).url.newBuilder()
@@ -32,28 +38,47 @@ class AllHentai : GroupLe("AllHentai", "https://z.ahen.me", "ru") {
                         url.addQueryParameter(genre.id, arrayOf("=", "=in", "=ex")[genre.state])
                     }
                 }
+
                 is Category -> filter.state.forEach { category ->
                     if (category.state != Filter.TriState.STATE_IGNORE) {
-                        url.addQueryParameter(category.id, arrayOf("=", "=in", "=ex")[category.state])
+                        url.addQueryParameter(
+                            category.id,
+                            arrayOf("=", "=in", "=ex")[category.state],
+                        )
                     }
                 }
-                is FilList -> filter.state.forEach { fils ->
-                    if (fils.state != Filter.TriState.STATE_IGNORE) {
-                        url.addQueryParameter(fils.id, arrayOf("=", "=in", "=ex")[fils.state])
+
+                is FiltersList -> filter.state.forEach { filters ->
+                    if (filters.state != Filter.TriState.STATE_IGNORE) {
+                        url.addQueryParameter(filters.id, arrayOf("=", "=in", "=ex")[filters.state])
                     }
                 }
+
                 is OrderBy -> {
                     if (filter.state > 0) {
-                        val ord = arrayOf("not", "year", "rate", "popularity", "votes", "created", "updated")[filter.state]
-                        return GET("$baseUrl/list?sortType=$ord&offset=${70 * (page - 1)}", headers)
+                        val sortType = arrayOf(
+                            "not",
+                            "year",
+                            "rate",
+                            "popularity",
+                            "votes",
+                            "created",
+                            "updated",
+                        )[filter.state]
+                        return GET(
+                            "$baseUrl/list?sortType=$sortType&offset=${70 * (page - 1)}",
+                            headers,
+                        )
                     }
                 }
+
                 is Tags -> {
                     if (filter.state > 0) {
-                        val tagName = getTagsList()[filter.state].url
+                        val tagName = tagsList[filter.state].url
                         return GET("$baseUrl/list/tag/$tagName?offset=${70 * (page - 1)}", headers)
                     }
                 }
+
                 else -> {}
             }
         }
@@ -66,14 +91,25 @@ class AllHentai : GroupLe("AllHentai", "https://z.ahen.me", "ru") {
 
     private class OrderBy : Filter.Select<String>(
         "Сортировка (только)",
-        arrayOf("Без сортировки", "По году", "По популярности", "Популярно сейчас", "По рейтингу", "Новинки", "По дате обновления"),
+        arrayOf(
+            "Без сортировки",
+            "По году",
+            "По популярности",
+            "Популярно сейчас",
+            "По рейтингу",
+            "Новинки",
+            "По дате обновления",
+        ),
     )
 
     private class Genre(name: String, val id: String) : Filter.TriState(name)
 
     private class GenreList(genres: List<Genre>) : Filter.Group<Genre>("Жанры", genres)
+
     private class Category(categories: List<Genre>) : Filter.Group<Genre>("Категории", categories)
-    private class FilList(fils: List<Genre>) : Filter.Group<Genre>("Фильтры", fils)
+
+    private class FiltersList(filters: List<Genre>) : Filter.Group<Genre>("Фильтры", filters)
+
     private class Tags(tags: Array<String>) : Filter.Select<String>("Тэг (только)", tags)
 
     private data class Tag(val name: String, val url: String)
@@ -81,12 +117,12 @@ class AllHentai : GroupLe("AllHentai", "https://z.ahen.me", "ru") {
     override fun getFilterList() = FilterList(
         OrderBy(),
         Tags(tagsName),
-        GenreList(getGenreList()),
-        Category(getCategoryList()),
-        FilList(getFilList()),
+        GenreList(genreList),
+        Category(categoryList),
+        FiltersList(filtersList),
     )
 
-    private fun getGenreList() = listOf(
+    private val genreList = listOf(
         Genre("ahegao", "el_855"),
         Genre("анал", "el_828"),
         Genre("бдсм", "el_78"),
@@ -123,7 +159,7 @@ class AllHentai : GroupLe("AllHentai", "https://z.ahen.me", "ru") {
         Genre("яой", "el_83"),
     )
 
-    private fun getCategoryList() = listOf(
+    private val categoryList = listOf(
         Genre("3D", "el_626"),
         Genre("Анимация", "el_5777"),
         Genre("Без текста", "el_3157"),
@@ -131,7 +167,7 @@ class AllHentai : GroupLe("AllHentai", "https://z.ahen.me", "ru") {
         Genre("Порно манхва", "el_1104"),
     )
 
-    private fun getFilList() = listOf(
+    private val filtersList = listOf(
         Genre("Высокий рейтинг", "s_high_rate"),
         Genre("Сингл", "s_single"),
         Genre("Для взрослых", "s_mature"),
@@ -142,7 +178,7 @@ class AllHentai : GroupLe("AllHentai", "https://z.ahen.me", "ru") {
         Genre("Продается", "s_sale"),
     )
 
-    private fun getTagsList() = listOf(
+    private val tagsList = listOf(
         Tag("Без тега", "not"),
         Tag("handjob", "handjob"),
         Tag("inseki", "inseki"),
@@ -262,33 +298,45 @@ class AllHentai : GroupLe("AllHentai", "https://z.ahen.me", "ru") {
         Tag("яндере", "yandere"),
     )
 
-    private val tagsName = getTagsList().map {
+    private val tagsName = tagsList.map {
         it.name
     }.toTypedArray()
 
     override fun setupPreferenceScreen(screen: androidx.preference.PreferenceScreen) {
         super.setupPreferenceScreen(screen)
         EditTextPreference(screen.context).apply {
-            key = DOMAIN_TITLE
-            this.title = DOMAIN_TITLE
-            summary = domain
-            this.setDefaultValue(DOMAIN_DEFAULT)
+            key = DOMAIN_PREF
+            title = DOMAIN_TITLE
+            setDefaultValue(super.baseUrl)
             dialogTitle = DOMAIN_TITLE
-            setOnPreferenceChangeListener { _, newValue ->
-                try {
-                    val res = preferences.edit().putString(DOMAIN_TITLE, newValue as String).commit()
-                    Toast.makeText(screen.context, "Для смены домена необходимо перезапустить приложение с полной остановкой.", Toast.LENGTH_LONG).show()
-                    res
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    false
-                }
+            dialogMessage = "Default URL:\n\t${super.baseUrl}"
+            setOnPreferenceChangeListener { _, _ ->
+                Toast.makeText(
+                    screen.context,
+                    "Для смены домена необходимо перезапустить приложение с полной остановкой.",
+                    Toast.LENGTH_LONG,
+                ).show()
+                true
             }
         }.let(screen::addPreference)
     }
 
+    private fun getPrefBaseUrl(): String = preferences.getString(DOMAIN_PREF, super.baseUrl)!!
+
+    init {
+        preferences.getString(DEFAULT_DOMAIN_PREF, null).let { defaultBaseUrl ->
+            if (defaultBaseUrl != super.baseUrl) {
+                preferences.edit()
+                    .putString(DOMAIN_PREF, super.baseUrl)
+                    .putString(DEFAULT_DOMAIN_PREF, super.baseUrl)
+                    .apply()
+            }
+        }
+    }
+
     companion object {
+        private const val DOMAIN_PREF = "Домен"
+        private const val DEFAULT_DOMAIN_PREF = "pref_default_domain"
         private const val DOMAIN_TITLE = "Домен"
-        private const val DOMAIN_DEFAULT = "https://z.ahen.me"
     }
 }

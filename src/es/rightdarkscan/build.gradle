@@ -1,9 +1,0 @@
-ext {
-    extName = 'Rightdark Scan'
-    extClass = '.RightdarkScan'
-    themePkg = 'madara'
-    baseUrl = 'https://darken-scan.com'
-    overrideVersionCode = 3
-}
-
-apply from: "$rootDir/common.gradle"

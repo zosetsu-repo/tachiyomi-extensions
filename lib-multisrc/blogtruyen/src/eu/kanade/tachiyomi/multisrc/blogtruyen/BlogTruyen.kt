@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.multisrc.blogtruyen
 
+import android.util.Log
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.source.model.Filter
@@ -291,7 +292,7 @@ abstract class BlogTruyen(
     override fun pageListParse(document: Document): List<Page> {
         val pages = mutableListOf<Page>()
 
-        document.select("#content > img").forEachIndexed { i, e ->
+        document.select(".content > img, #content > img").forEachIndexed { i, e ->
             pages.add(Page(i, imageUrl = e.absUrl("src")))
         }
 
@@ -366,7 +367,11 @@ abstract class BlogTruyen(
         )
 
         Single.fromCallable {
-            client.newCall(request).execute().close()
+            try {
+                client.newCall(request).execute().close()
+            } catch (e: Exception) {
+                Log.e("BlogTruyen", "Error updating view count", e)
+            }
         }
             .subscribeOn(Schedulers.io())
             .observeOn(Schedulers.io())

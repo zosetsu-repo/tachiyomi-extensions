@@ -1,15 +1,19 @@
 package eu.kanade.tachiyomi.extension.en.resetscans
+
 import eu.kanade.tachiyomi.multisrc.madara.Madara
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 class ResetScans : Madara(
     "Reset Scans",
-    "https://resetscan.com",
+    "https://reset-scans.co",
     "en",
-    dateFormat = SimpleDateFormat("MMM dd", Locale("en")),
+    dateFormat = SimpleDateFormat("MMM dd", Locale.US),
 ) {
-    override val useLoadMoreRequest = LoadMoreStrategy.Always
+    // Moved from FuzzyDoodle to Madara
+    override val versionId = 3
+
     override val useNewChapterEndpoint = true
-    override val chapterUrlSelector = ".li__text > a"
+
+    override fun chapterListSelector() = "li.wp-manga-chapter>div:not(:has(a[href*=#]))"
 }

@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -102,18 +103,18 @@ abstract class LibGroup(
     }
 
     private var _constants: Constants? = null
-    private fun getConstants(): Constants {
+    private fun getConstants(): Constants? {
         if (_constants == null) {
             try {
                 _constants = client.newCall(
                     GET("$apiDomain/api/constants?fields[]=genres&fields[]=tags&fields[]=types&fields[]=scanlateStatus&fields[]=status&fields[]=format&fields[]=ageRestriction&fields[]=imageServers", headers),
                 ).execute().parseAs<Data<Constants>>().data
-                return _constants!!
-            } catch (ex: SerializationException) {
-                throw Exception("Ошибка сериализации. Проверьте сайт.")
+                return _constants
+            } catch (ex: Exception) {
+                Log.d("LibGroup", "Error getting constants: $ex")
             }
         }
-        return _constants!!
+        return _constants
     }
 
     private fun checkForToken(chain: Interceptor.Chain): Response {
@@ -188,7 +189,11 @@ abstract class LibGroup(
                             } else {
                                 it.replace("\\", "")
                             }
-                            returnValue = str.parseAs<AuthToken>()
+                            str.parseAs<AuthToken>().let { auth ->
+                                if (auth.isValid()) {
+                                    returnValue = auth
+                                }
+                            }
                         }
                         latch.countDown()
                     }
@@ -324,7 +329,7 @@ abstract class LibGroup(
                     if (currentBranch.value.branchId == defaultBranchId && sortingList == "ms_mixing") { // ms_mixing with default branch from api
                         chapters.add(it.value.toSChapter(slugUrl, defaultBranchId, isScanUser()))
                     } else if (defaultBranchId == null && sortingList == "ms_mixing") { // ms_mixing with first branch in chapter
-                        if (chapters.any { chpIt -> chpIt.chapter_number == it.value.itemNumber }) {
+                        if (chapters.any { chpIt -> chpIt.chapter_number == it.value.number.toFloat() }) {
                             chapters.add(it.value.toSChapter(slugUrl, currentBranch.value.branchId, isScanUser()))
                         }
                     } else if (sortingList == "ms_combining") { // ms_combining
@@ -372,7 +377,7 @@ abstract class LibGroup(
         if (page.imageUrl != null) {
             return Observable.just(page.imageUrl)
         }
-        val server = getConstants().getServer(isServer(), siteId).url
+        val server = getConstants()?.getServer(isServer(), siteId)?.url ?: throw Exception("Ошибка получения сервера изображений")
         return Observable.just("$server${page.url}")
     }
 
@@ -504,13 +509,13 @@ abstract class LibGroup(
 
         filters += if (_constants != null) {
             listOf(
-                CategoryList(getConstants().getCategories(siteId).map { CheckFilter(it.label, it.id.toString()) }),
-                FormatList(getConstants().getFormats(siteId).map { SearchFilter(it.name, it.id.toString()) }),
-                GenreList(getConstants().getGenres(siteId).map { SearchFilter(it.name, it.id.toString()) }),
-                TagList(getConstants().getTags(siteId).map { SearchFilter(it.name, it.id.toString()) }),
-                StatusList(getConstants().getScanlateStatuses(siteId).map { CheckFilter(it.label, it.id.toString()) }),
-                StatusTitleList(getConstants().getTitleStatuses(siteId).map { CheckFilter(it.label, it.id.toString()) }),
-                AgeList(getConstants().getAgeRestrictions(siteId).map { CheckFilter(it.label, it.id.toString()) }),
+                CategoryList(getConstants()!!.getCategories(siteId).map { CheckFilter(it.label, it.id.toString()) }),
+                FormatList(getConstants()!!.getFormats(siteId).map { SearchFilter(it.name, it.id.toString()) }),
+                GenreList(getConstants()!!.getGenres(siteId).map { SearchFilter(it.name, it.id.toString()) }),
+                TagList(getConstants()!!.getTags(siteId).map { SearchFilter(it.name, it.id.toString()) }),
+                StatusList(getConstants()!!.getScanlateStatuses(siteId).map { CheckFilter(it.label, it.id.toString()) }),
+                StatusTitleList(getConstants()!!.getTitleStatuses(siteId).map { CheckFilter(it.label, it.id.toString()) }),
+                AgeList(getConstants()!!.getAgeRestrictions(siteId).map { CheckFilter(it.label, it.id.toString()) }),
             )
         } else {
             listOf(
