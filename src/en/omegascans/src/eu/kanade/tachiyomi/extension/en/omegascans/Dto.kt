@@ -15,6 +15,7 @@ class Tree(
 @Serializable
 class CubariChaptersResponse(
     val chapters: Map<String, CubariChapter>,
+    val groups: Map<String, String>,
 )
 
 @Serializable

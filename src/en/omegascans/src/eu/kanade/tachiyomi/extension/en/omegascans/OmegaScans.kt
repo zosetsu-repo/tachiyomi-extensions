@@ -104,19 +104,21 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
         cubariChapters.chapters.toSortedMap().entries.forEach { (num, chap) ->
             val number = num.toFloat()
             if (number !in seenChapters) {
-                val chapter = SChapter.create().apply {
-                    url = "https://cubari.moe" + chap.groups["0"]!!
-                        .replace("/proxy/", "/read/")
-                        .removeSuffix("/")
-                        .plus("/")
-                    name = "Chapter $num"
-                    chapter_number = number
-                    scanlator = "Early Access"
-                    date_upload = chap.release_date["0"]!! * 1000
+                val chapter = chap.groups.map { (groupNo, chapUrl) ->
+                    SChapter.create().apply {
+                        url = "https://cubari.moe" + chapUrl
+                            .replace("/proxy/", "/read/")
+                            .removeSuffix("/")
+                            .plus("/")
+                        name = "Chapter $num"
+                        chapter_number = number
+                        scanlator = "Early Access"
+                        date_upload = chap.release_date[groupNo]?.times(1000) ?: 0L
+                    }
                 }
 
                 seenChapters.add(number)
-                chapters.add(0, chapter)
+                chapters.addAll(0, chapter)
             }
         }
 
@@ -128,6 +130,16 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
             chapter.apply {
                 chapter_number = CHAP_NUM_REGEX.find(name)?.value?.toFloatOrNull() ?: -1f
             }
+        }
+    }
+
+    override fun getChapterUrl(chapter: SChapter): String {
+        return if (chapter.url.startsWith("https://cubari.moe")) {
+            return chapter.url
+                .replace("/api/", "/")
+                .replace("/chapter/", "/")
+        } else {
+            super.getChapterUrl(chapter)
         }
     }
 
