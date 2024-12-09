@@ -39,37 +39,38 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
             .execute()
             .parseAs<GitHubResponse>()
             .tree.map { it.path }
-            .filter { it.endsWith(".json") }
+            .filter { it.endsWith(".json") && it !in listOf("gaylorddd!.json", "test.json") }
+            .associateBy { cubari ->
+                cubari
+                    .substringBeforeLast(".json")
+                    .filter { it.isLetterOrDigit() || it == ' ' }
+                    .lowercase()
+            }
     }
 
-    private fun getClosest(title: String): String =
-        cubariList.minByOrNull {
-            editDistance(it.substringBeforeLast(".json").lowercase(), title.lowercase())
-        }!!
+    private fun getClosest(title: String): String? {
+        val cleanedTitle = title.filter { it.isLetterOrDigit() || it == ' ' }.lowercase()
 
-    private fun editDistance(s1: String, s2: String): Int {
-        val m = s1.length
-        val n = s2.length
-        var prev: Int
-        val curr = IntArray(n + 1)
+        var jc = 0.0
+        var res: String? = null
 
-        for (j in 0..n) curr[j] = j
-
-        for (i in 1..m) {
-            prev = curr[0]
-            curr[0] = i
-            for (j in 1..n) {
-                val temp = curr[j]
-                if (s1[i - 1] == s2[j - 1]) {
-                    curr[j] = prev
-                } else {
-                    curr[j] = 1 + minOf(curr[j - 1], prev, curr[j])
-                }
-                prev = temp
+        cubariList.forEach { (cleanedCubari, cubari) ->
+            val jaccard = jaccardSimilarity(cleanedCubari, cleanedTitle)
+            if (jaccard >= 0.6 && jaccard > jc) {
+                jc = jaccard
+                res = cubari
             }
         }
 
-        return curr[n]
+        return res
+    }
+
+    private fun jaccardSimilarity(s1: String, s2: String): Double {
+        val set1 = s1.split(" ").toSet()
+        val set2 = s2.split(" ").toSet()
+        val intersection = set1.intersect(set2).size.toDouble()
+        val union = set1.union(set2).size.toDouble()
+        return if (union == 0.0) 0.0 else intersection / union
     }
 
     override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = runBlocking {
@@ -80,6 +81,7 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
 
         val cubariChaptersDeferred = async {
             val jsonFile = getClosest(manga.title)
+                ?: return@async null
 
             val cubariId = Base64.encodeToString(
                 "raw/Laicht/images/master/$jsonFile".toByteArray(),
@@ -95,6 +97,7 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
 
         val chapters = primaryChaptersDeferred.await().toMutableList()
         val cubariChapters = cubariChaptersDeferred.await()
+            ?: return@runBlocking Observable.just(chapters)
 
         val seenChapters = HashSet<Float>()
         seenChapters.addAll(chapters.map { it.chapter_number })
