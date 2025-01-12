@@ -15,7 +15,7 @@ concurrency:
 jobs:
   auto-merge:
     name: Auto cherry-pick Keiyoushi
-    if: github.repository == 'komikku-app/komikku-extensions'
+    if: github.repository == 'komikku-repo/komikku-extensions'
     runs-on: ubuntu-latest
 
     steps:

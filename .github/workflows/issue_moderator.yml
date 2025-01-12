@@ -35,7 +35,7 @@ jobs:
           existing-check-enabled: true
           existing-check-labels: |
             ["Source request", "Domain changed"]
-          existing-check-repo-url: https://raw.githubusercontent.com/komikku-app/komikku-extensions/repo/index.min.json
+          existing-check-repo-url: https://raw.githubusercontent.com/komikku-repo/komikku-extensions/repo/index.min.json
 
           auto-close-rules: |
             [

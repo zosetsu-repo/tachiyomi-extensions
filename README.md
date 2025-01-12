@@ -1,6 +1,6 @@
 | Build | Up to date | Support Server |
 |-------|------------|----------------|
-| [![Build](https://img.shields.io/github/actions/workflow/status/komikku-app/komikku-extensions/build_push_komikku.yml?labelColor=27303D)](https://github.com/komikku-app/komikku-extensions/actions/workflows/build_push_komikku.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/komikku-app/komikku-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/komikku-app/komikku-extensions/actions/workflows/auto_cherry_pick.yml) | [![Discord](https://img.shields.io/discord/1242381704459452488?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/85jB7V5AJR) |
+| [![Build](https://github.com/komikku-repo/komikku-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/komikku-repo/komikku-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/komikku-repo/komikku-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/komikku-repo/komikku-extensions/actions/workflows/auto_cherry_pick.yml) | [![Discord](https://img.shields.io/discord/1242381704459452488?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/85jB7V5AJR) |
 
 # Komikku / Mihon / Tachiyomi Extensions
 This repository contains the available extension catalogues is built-in with [Komikku](https://github.com/komikku-app/komikku) app while also usable for the Mihon / Tachiyomi app or other forks.
@@ -44,7 +44,7 @@ One-click installation is only supported by these Tachiyomi versions:
 * TachiyomiSY Preview r539+
 * Aniyomi Preview r7443+
 
-Navigate to [the website](https://komikku-app.github.io/) and tap "Add to Tachiyomi", then restart the app.
+Navigate to [the website](https://komikku-repo.github.io/) and tap "Add to Tachiyomi", then restart the app.
 
 ## TachiyomiAZ
 1. Go to Settings → Browse
@@ -55,7 +55,7 @@ Navigate to [the website](https://komikku-app.github.io/) and tap "Add to Tachiy
 ## Manually
 External repositories add additional sources to **Komikku**. You can add external repositories by going to **More** -> **Settings** -> **Browse** and tapping **Extension repos**.
 
-Once there, you can add repositories by inputting this URL: `https://raw.githubusercontent.com/komikku-app/extensions/repo/index.min.json`
+Once there, you can add repositories by inputting this URL: `https://raw.githubusercontent.com/komikku-repo/extensions/repo/index.min.json`
 
 Once you've added a repository, go to Browse -> Extensions and refresh the extensions list.
 
@@ -64,22 +64,22 @@ You can now tap the download button next to extensions to install them.
 > You may need to [enable third-party installations](https://mihon.app/docs/faq/browse/extensions#enabling-third-party-installations).
 
 ## Others
-If you're not using any of the above fork then manually download and update extensions from the [listing page](https://komikku-app.github.io/extensions/extensions/)
+If you're not using any of the above fork then manually download and update extensions from the [listing page](https://komikku-repo.github.io/extensions/extensions/)
 
 
 # Usage
 
-[Getting started](https://komikku-app.github.io/docs/guides/getting-started#adding-the-extension-repo)
+[Getting started](https://komikku-repo.github.io/docs/guides/getting-started#adding-the-extension-repo)
 
 Extension sources can be downloaded, installed, and uninstalled via the main Komikku app. They are installed and uninstalled like regular apps, in `.apk` format.
 
 ## Downloads
 
-If you prefer to directly download the APK files, they are available via https://komikku-app.github.io/extensions/ or directly in this GitHub repository in the [`repo` branch](https://github.com/komikku-app/komikku-extensions/tree/repo/apk).
+If you prefer to directly download the APK files, they are available via https://komikku-repo.github.io/extensions/ or directly in this GitHub repository in the [`repo` branch](https://github.com/komikku-repo/komikku-extensions/tree/repo/apk).
 
 # Requests
 
-To request a new source or bug fix, [create an issue](https://github.com/komikku-app/komikku-extensions/issues/new/choose).
+To request a new source or bug fix, [create an issue](https://github.com/komikku-repo/komikku-extensions/issues/new/choose).
 
 Please note that creating an issue does not mean that the source will be added or fixed in a timely
 fashion, because the work is volunteer-based. Some sources may also be impossible to do or prohibitively
@@ -92,7 +92,7 @@ Issues are up-for-grabs for any developer if there is no assigned user already.
 
 Contributions are welcome!
 
-Check out the repo's [issue backlog](https://github.com/komikku-app/komikku-extensions/issues) for source requests and bug reports.
+Check out the repo's [issue backlog](https://github.com/komikku-repo/komikku-extensions/issues) for source requests and bug reports.
 
 To get started with development, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 

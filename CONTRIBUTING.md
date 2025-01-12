@@ -2,7 +2,7 @@
 
 This guide have some instructions and tips on how to create a new Tachiyomi extension. Please **read it carefully** if you're a new contributor or don't have any experience on the required languages and knowledges.
 
-This guide is not definitive and it's being updated over time. If you find any issue on it, feel free to report it through a [Meta Issue](https://github.com/komikku-app/komikku-extensions/issues/new?assignees=&labels=Meta+request&template=06_request_meta.yml) or fixing it directly by submitting a Pull Request.
+This guide is not definitive and it's being updated over time. If you find any issue on it, feel free to report it through a [Meta Issue](https://github.com/komikku-repo/komikku-extensions/issues/new?assignees=&labels=Meta+request&template=06_request_meta.yml) or fixing it directly by submitting a Pull Request.
 
 ## Table of Contents
 
@@ -251,7 +251,7 @@ Extensions rely on [extensions-lib](https://github.com/komikku-app/extensions-li
 
 #### DataImage library
 
-[`lib-dataimage`](https://github.com/komikku-app/komikku-extensions/tree/master/lib/dataimage) is a library for handling [base 64 encoded image data](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs) using an [OkHttp interceptor](https://square.github.io/okhttp/interceptors/).
+[`lib-dataimage`](https://github.com/komikku-repo/komikku-extensions/tree/master/lib/dataimage) is a library for handling [base 64 encoded image data](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs) using an [OkHttp interceptor](https://square.github.io/okhttp/interceptors/).
 
 ```groovy
 dependencies {
@@ -261,7 +261,7 @@ dependencies {
 
 #### i18n library
 
-[`lib-i18n`](https://github.com/komikku-app/komikku-extensions/tree/master/lib/i18n) is a library for handling internationalization in the sources. It allows loading `.properties` files with messages located under the `assets/i18n` folder of each extension, that can be used to translate strings under the source.
+[`lib-i18n`](https://github.com/komikku-repo/komikku-extensions/tree/master/lib/i18n) is a library for handling internationalization in the sources. It allows loading `.properties` files with messages located under the `assets/i18n` folder of each extension, that can be used to translate strings under the source.
 
 ```groovy
 dependencies {
@@ -421,7 +421,7 @@ open class UriPartFilter(displayName: String, private val vals: Array<Pair<Strin
 #### URL intent filter
 
 Extensions can define URL intent filters by defining it inside a custom `AndroidManifest.xml` file.
-For an example, refer to [the NHentai module's `AndroidManifest.xml` file](https://github.com/komikku-app/komikku-extensions/blob/master/src/all/nhentai/AndroidManifest.xml) and [its corresponding `NHUrlActivity` handler](https://github.com/komikku-app/komikku-extensions/blob/master/src/all/nhentai/src/eu/kanade/tachiyomi/extension/all/nhentai/NHUrlActivity.kt).
+For an example, refer to [the NHentai module's `AndroidManifest.xml` file](https://github.com/komikku-repo/komikku-extensions/blob/master/src/all/nhentai/AndroidManifest.xml) and [its corresponding `NHUrlActivity` handler](https://github.com/komikku-repo/komikku-extensions/blob/master/src/all/nhentai/src/eu/kanade/tachiyomi/extension/all/nhentai/NHUrlActivity.kt).
 
 To test if the URL intent filter is working as expected, you can try opening the website in a browser and navigating to the endpoint that was added as a filter or clicking a hyperlink. Alternatively, you can use the `adb` command below.
 
@@ -450,7 +450,7 @@ If not set, it defaults to `ALWAYS_UPDATE`.
 
 There is some cases where existing sources changes their name on the website. To correctly reflect these changes in the extension, you need to explicity set the `id` to the same old value, otherwise it will get changed by the new `name` value and users will be forced to migrate back to the source.
 
-To get the current `id` value before the name change, you can search the source name in the [repository JSON file](https://github.com/komikku-app/komikku-extensions/blob/repo/index.json) by looking into the `sources` attribute of the extension. When you have the `id` copied, you can override it in the source:
+To get the current `id` value before the name change, you can search the source name in the [repository JSON file](https://github.com/komikku-repo/komikku-extensions/blob/repo/index.json) by looking into the `sources` attribute of the extension. When you have the `id` copied, you can override it in the source:
 
 ```kotlin
 override val id: Long = <the-id>
