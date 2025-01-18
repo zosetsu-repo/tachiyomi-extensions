@@ -5,7 +5,7 @@
 # Komikku / Mihon / Tachiyomi Extensions
 This repository contains the available extension catalogues is built-in with [Komikku](https://github.com/komikku-app/komikku) app while also usable for the Mihon / Tachiyomi app or other forks.
 
-This repository automatically merges any updates from [Keiyoushi](https://github.com/keiyoushi/extensions) every 8 hours to have the best of community contributions. Beside from that, it has a few of my developed extensions or some improvements. Enjoy!
+This repository automatically merges any updates from [Keiyoushi](https://github.com/keiyoushi/extensions-source) every 6 hours to have the best of community contributions. Beside from that, it has a few of my developed extensions or some improvements. Enjoy!
 
 Some extensions from this repo provide better support for Komikku's feature showing related titles.
 
@@ -49,7 +49,7 @@ Navigate to [the website](https://komikku-repo.github.io/) and tap "Add to Tachi
 ## TachiyomiAZ
 1. Go to Settings → Browse
 2. Tap on "Edit repos" and then "+" button at bottom
-3. Input keiyoushi/extensions
+3. Input komikku-repo/extensions
 4. Enjoy!
 
 ## Manually
@@ -61,10 +61,10 @@ Once you've added a repository, go to Browse -> Extensions and refresh the exten
 
 You can now tap the download button next to extensions to install them.
 
-> You may need to [enable third-party installations](https://mihon.app/docs/faq/browse/extensions#enabling-third-party-installations).
+> You may need to [enable third-party installations](https://komikku-app.github.io/docs/faq/browse/extensions#enabling-third-party-installations).
 
 ## Others
-If you're not using any of the above fork then manually download and update extensions from the [listing page](https://komikku-repo.github.io/extensions/extensions/)
+If you're not using any of the above fork then manually download and update extensions from the [listing page](https://komikku-repo.github.io/extensions/)
 
 
 # Usage
@@ -75,7 +75,7 @@ Extension sources can be downloaded, installed, and uninstalled via the main Kom
 
 ## Downloads
 
-If you prefer to directly download the APK files, they are available via https://komikku-repo.github.io/extensions/ or directly in this GitHub repository in the [`repo` branch](https://github.com/komikku-repo/komikku-extensions/tree/repo/apk).
+If you prefer to directly download the APK files, they are available via https://komikku-repo.github.io/extensions/ or directly in this GitHub repository in the [`repo` branch](https://github.com/komikku-repo/extensions/tree/repo/apk).
 
 # Requests
 
