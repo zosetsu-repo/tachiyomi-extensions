@@ -159,7 +159,7 @@ jobs:
           echo "email:       ${{ steps.import-gpg.outputs.email }}"
 
       - name: Deploy repo
-        uses: EndBug/add-and-commit@v9
+        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9
         with:
           message: "Update extensions repo"
           cwd: "./repo"
