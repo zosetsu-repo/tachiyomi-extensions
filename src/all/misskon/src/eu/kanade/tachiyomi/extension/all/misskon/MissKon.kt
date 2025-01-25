@@ -213,7 +213,7 @@ class MissKon : ConfigurableSource, HttpSource() {
     }
 
     private fun parseImageList(document: Document): List<String> = document
-        .select("div#fukie2.entry p img").map { image ->
+        .select("div.entry p img").map { image ->
             image.imgAttr()
         }
 

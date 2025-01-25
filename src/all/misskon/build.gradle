@@ -1,5 +1,5 @@
 ext {
-    kmkVersionCode = 6
+    kmkVersionCode = 7
     extName = 'MissKon (MrCong)'
     extClass = '.MissKon'
     extVersionCode = 1
