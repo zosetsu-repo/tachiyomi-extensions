@@ -1,6 +1,6 @@
-| Build | Up to date | Support Server |
-|-------|------------|----------------|
-| [![Build](https://github.com/komikku-repo/komikku-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/komikku-repo/komikku-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/komikku-repo/komikku-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/komikku-repo/komikku-extensions/actions/workflows/auto_cherry_pick.yml) | [![Discord](https://img.shields.io/discord/1242381704459452488?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/85jB7V5AJR) |
+| Build | Up to date | Support Server | Install to app |
+|-------|------------|----------------|----------------|
+| [![Build](https://github.com/komikku-repo/komikku-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/komikku-repo/komikku-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/komikku-repo/komikku-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/komikku-repo/komikku-extensions/actions/workflows/auto_cherry_pick.yml) | [![Discord](https://img.shields.io/discord/1242381704459452488?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/85jB7V5AJR) | [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/komikku-repo/extensions/repo/index.min.json) |
 
 # Komikku / Mihon / Tachiyomi Extensions
 This repository contains the available extension catalogues is built-in with [Komikku](https://github.com/komikku-app/komikku) app while also usable for the Mihon / Tachiyomi app or other forks.
