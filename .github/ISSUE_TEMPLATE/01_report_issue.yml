@@ -59,9 +59,9 @@ body:
   - type: input
     id: tachiyomi-version
     attributes:
-      label: Mihon/Tachiyomi version
+      label: App version
       description: |
-        You can find your Mihon/Tachiyomi version in **More → About**.
+        You can find your App version in **More → About**.
       placeholder: |
         Example: "0.16.3"
     validations:

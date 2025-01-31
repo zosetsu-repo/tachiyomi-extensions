@@ -54,6 +54,8 @@ Before you start, please note that the ability to use following technologies is 
 
 Some alternative steps can be followed to ignore "repo" branch and skip unrelated sources, which will make it faster to pull, navigate and build. This will also reduce disk usage and network traffic.
 
+**These steps are only needed when the repo is huge and contains a lot of sources. If the repo is small, just do a normal full clone instead.**
+
 <details><summary>Steps</summary>
 
 1. Make sure to delete "repo" branch in your fork. You may also want to disable Actions in the repo settings.
@@ -173,7 +175,7 @@ The `<lang>` used in the folder inside `src` should be the major `language` part
 
 ### Loading a subset of Gradle modules
 
-By default, all individual and generated multisrc extensions are loaded for local development. 
+By default, all individual and generated multisrc extensions are loaded for local development.
 This may be inconvenient if you only need to work on one extension at a time.
 
 To adjust which modules are loaded, make adjustments to the `settings.gradle.kts` file as needed.
@@ -491,9 +493,8 @@ multisrc
 │       │       │   └── ic_launcher.png
 │       │       ├── mipmap-xxhdpi
 │       │       │   └── ic_launcher.png
-│       │       ├── mipmap-xxxhdpi
-│       │       │   └── ic_launcher.png
-│       │       └── web_hi_res_512.png
+│       │       └── mipmap-xxxhdpi
+│       │           └── ic_launcher.png
 │       └── <sourcepkg>
 │           ├── additional.gradle
 │           ├── AndroidManifest.xml
@@ -506,9 +507,8 @@ multisrc
 │           │   │   └── ic_launcher.png
 │           │   ├── mipmap-xxhdpi
 │           │   │   └── ic_launcher.png
-│           │   ├── mipmap-xxxhdpi
-│           │   │   └── ic_launcher.png
-│           │   └── web_hi_res_512.png
+│           │   └── mipmap-xxxhdpi
+│           │       └── ic_launcher.png
 │           └── src
 │               └── <SourceName>.kt
 └── src
