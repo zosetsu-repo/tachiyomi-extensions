@@ -165,3 +165,7 @@ jobs:
           cwd: "./repo"
           committer_name: ${{ steps.import-gpg.outputs.name }}
           committer_email: ${{ steps.import-gpg.outputs.email }}
+
+      - name: Purge cached index on jsDelivr
+        run: |
+          curl https://purge.jsdelivr.net/gh/komikku-repo/extensions@repo/index.min.json
