@@ -25,28 +25,14 @@ jobs:
           ref: master
           path: master
           fetch-depth: 100
-          token: ${{ secrets.BOT_PAT }}
-
-      - name: Import GPG key
-        id: import-gpg
-        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5 # v6
-        with:
-          workdir: master
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-
-      - name: GPG user IDs
-        run: |
-          echo "fingerprint: ${{ steps.import-gpg.outputs.fingerprint }}"
-          echo "keyid:       ${{ steps.import-gpg.outputs.keyid }}"
-          echo "name:        ${{ steps.import-gpg.outputs.name }}"
-          echo "email:       ${{ steps.import-gpg.outputs.email }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cherry-picking
         run: |
           cd master
+
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
           
           git fetch origin keiyoushi
           git checkout keiyoushi
@@ -109,7 +95,7 @@ jobs:
       #   run: |
       #     cd master
       #     echo "Merging 'keiyoushi-upstream/main' into merge-keiyoushi"
-      #     git merge -S --no-edit keiyoushi-upstream/main
+      #     git merge --no-edit keiyoushi-upstream/main
       #     echo "Last commit: `git log -1 --oneline`"
 
       - name: Pushing to repo
