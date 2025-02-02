@@ -5,6 +5,7 @@
     ":semanticCommits",
     "config:best-practices"
   ],
+  "schedule": ["on sunday"],
   "includePaths": [
     "buildSrc/gradle/**",
     "gradle/**",
