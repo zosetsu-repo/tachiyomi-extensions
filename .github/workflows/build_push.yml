@@ -26,10 +26,18 @@ jobs:
     name: Prepare job
     runs-on: ubuntu-latest
     outputs:
+      latestCommitMessage: ${{ steps.set-env.outputs.LATEST_COMMIT_MESSAGE }}
       individualMatrix: ${{ steps.generate-matrices.outputs.individualMatrix }}
     steps:
       - name: Clone repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set env
+        id: set-env
+        run: |
+          echo "LATEST_COMMIT_MESSAGE<<{delimiter}
+          $(git log -1 --pretty=%B)
+          {delimiter}" >> $GITHUB_OUTPUT
 
       - name: Get number of modules
         run: |
@@ -99,6 +107,7 @@ jobs:
   publish_repo:
     name: Publish repo
     needs:
+      - prepare
       - build_individual
     if: github.repository == 'komikku-repo/komikku-extensions'
     runs-on: ubuntu-latest
@@ -144,7 +153,7 @@ jobs:
       - name: Deploy repo
         uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9
         with:
-          message: "Update extensions repo"
+          message: "${{ needs.prepare.outputs.latestCommitMessage }}"
           cwd: "./repo"
           committer_name: github-actions[bot]
           committer_email: github-actions[bot]@users.noreply.github.com
