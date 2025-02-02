@@ -1,5 +1,6 @@
 ext {
-    extName = 'ReadComicNet'
+    kmkVersionCode = 1
+    extName = 'AZComix'
     extClass = '.ReadcomicNet'
     extVersionCode = 2
 }
