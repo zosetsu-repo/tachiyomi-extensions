@@ -1,8 +1,0 @@
-ext {
-    kmkVersionCode = 1
-    extName = 'AZComix'
-    extClass = '.ReadcomicNet'
-    extVersionCode = 2
-}
-
-apply from: "$rootDir/common.gradle"
