@@ -140,16 +140,28 @@ class Manhuagui(
 
             // Example: https://www.manhuagui.com/list/japan_maoxian_qingnian_2020_b/update_p1.html
             //                                        /$params                      /$sortOrder $page
-            var url = "$baseUrl/list"
-            if (params != "") {
-                url += "/$params"
-            }
-            url += if (sortOrder == "") {
-                "/index_p$page.html"
-            } else {
-                "/${sortOrder}_p$page.html"
+            val url: String = when {
+                sortOrder == "" -> "$baseUrl/list${params.toPathOrEmpty()}/index_p$page.html"
+                sortOrder.startsWith(RANK_PREFIX) -> {
+                    "$baseUrl/rank${params.toPathOrEmpty()}".let {
+                        if (it.endsWith("rank")) {
+                            "$it/${sortOrder.removePrefix(RANK_PREFIX).toPathOrEmpty("",".html")}"
+                        } else {
+                            "$it${sortOrder.removePrefix(RANK_PREFIX).toPathOrEmpty("_")}.html"
+                        }
+                    }
+                }
+                else -> "$baseUrl/list${params.toPathOrEmpty()}/${sortOrder}_p$page.html"
             }
             return GET(url, headers)
+        }
+    }
+
+    private fun String.toPathOrEmpty(prefix: String = "/", suffix: String = ""): String {
+        return if (isEmpty()) {
+            this
+        } else {
+            "$prefix$this$suffix"
         }
     }
 
@@ -231,23 +243,38 @@ class Manhuagui(
 
     override fun searchMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        if (response.request.url.encodedPath.startsWith("/s/")) {
-            // Normal search
-            val mangas = document.select(searchMangaSelector()).map { element ->
-                searchMangaFromElement(element)
-            }
-            val hasNextPage = searchMangaNextPageSelector().let { selector ->
-                document.select(selector).first()
-            } != null
+        return when {
+            response.request.url.encodedPath.startsWith("/s/") -> {
+                // Normal search
+                val mangas = document.select(searchMangaSelector()).map { element ->
+                    searchMangaFromElement(element)
+                }
+                val hasNextPage = searchMangaNextPageSelector().let { selector ->
+                    document.select(selector).first()
+                } != null
 
-            return MangasPage(mangas, hasNextPage)
-        } else {
-            // Filters search
-            val mangas = document.select(popularMangaSelector()).map { element ->
-                popularMangaFromElement(element)
+                MangasPage(mangas, hasNextPage)
             }
-            val hasNextPage = document.select(popularMangaNextPageSelector()).first() != null
-            return MangasPage(mangas, hasNextPage)
+            response.request.url.encodedPath.startsWith("/rank/") -> {
+                MangasPage(
+                    document.select("td.rank-title").map {
+                        SManga.create().apply {
+                            url = it.select("a").attr("href")
+                            title = it.select("a").text()
+                            // The ranking page does not include images.
+                        }
+                    },
+                    false,
+                )
+            }
+            else -> {
+                // Filters search
+                val mangas = document.select(popularMangaSelector()).map { element ->
+                    popularMangaFromElement(element)
+                }
+                val hasNextPage = document.select(popularMangaNextPageSelector()).first() != null
+                MangasPage(mangas, hasNextPage)
+            }
         }
     }
 
@@ -427,10 +454,10 @@ class Manhuagui(
     override fun setupPreferenceScreen(screen: androidx.preference.PreferenceScreen) {
         val mainSiteRateLimitPreference = androidx.preference.ListPreference(screen.context).apply {
             key = MAINSITE_RATELIMIT_PREF
-            title = intl["MAINSITE_RATELIMIT_PREF_TITLE"]
+            title = intl[MAINSITE_RATELIMIT_PREF_TITLE]
             entries = ENTRIES_ARRAY
             entryValues = ENTRIES_ARRAY
-            summary = intl["MAINSITE_RATELIMIT_PREF_SUMMARY"]
+            summary = intl[MAINSITE_RATELIMIT_PREF_SUMMARY]
 
             setDefaultValue(MAINSITE_RATELIMIT_DEFAULT_VALUE)
             setOnPreferenceChangeListener { _, newValue ->
@@ -446,10 +473,10 @@ class Manhuagui(
 
         val imgCDNRateLimitPreference = androidx.preference.ListPreference(screen.context).apply {
             key = IMAGE_CDN_RATELIMIT_PREF
-            title = intl["IMAGE_CDN_RATELIMIT_PREF_TITLE"]
+            title = intl[IMAGE_CDN_RATELIMIT_PREF_TITLE]
             entries = ENTRIES_ARRAY
             entryValues = ENTRIES_ARRAY
-            summary = intl["IMAGE_CDN_RATELIMIT_PREF_SUMMARY"]
+            summary = intl[IMAGE_CDN_RATELIMIT_PREF_SUMMARY]
 
             setDefaultValue(IMAGE_CDN_RATELIMIT_DEFAULT_VALUE)
             setOnPreferenceChangeListener { _, newValue ->
@@ -466,8 +493,8 @@ class Manhuagui(
         // Simplified/Traditional Chinese version website switch
         val zhHantPreference = androidx.preference.CheckBoxPreference(screen.context).apply {
             key = SHOW_ZH_HANT_WEBSITE_PREF
-            title = intl["SHOW_ZH_HANT_WEBSITE_PREF_TITLE"]
-            summary = intl["SHOW_ZH_HANT_WEBSITE_PREF_SUMMARY"]
+            title = intl[SHOW_ZH_HANT_WEBSITE_PREF_TITLE]
+            summary = intl[SHOW_ZH_HANT_WEBSITE_PREF_SUMMARY]
 
             setOnPreferenceChangeListener { _, newValue ->
                 try {
@@ -483,8 +510,8 @@ class Manhuagui(
         // R18+ switch
         val r18Preference = androidx.preference.CheckBoxPreference(screen.context).apply {
             key = SHOW_R18_PREF
-            title = intl["SHOW_R18_PREF_TITLE"]
-            summary = intl["SHOW_R18_PREF_SUMMARY"]
+            title = intl[SHOW_R18_PREF_TITLE]
+            summary = intl[SHOW_R18_PREF_SUMMARY]
 
             setOnPreferenceChangeListener { _, newValue ->
                 try {
@@ -499,8 +526,8 @@ class Manhuagui(
 
         val mirrorURLPreference = androidx.preference.CheckBoxPreference(screen.context).apply {
             key = USE_MIRROR_URL_PREF
-            title = intl["USE_MIRROR_URL_PREF_TITLE"]
-            summary = intl["USE_MIRROR_URL_PREF_SUMMARY"]
+            title = intl[USE_MIRROR_URL_PREF_TITLE]
+            summary = intl[USE_MIRROR_URL_PREF_SUMMARY]
 
             setDefaultValue(false)
             setOnPreferenceChangeListener { _, newValue ->
@@ -532,180 +559,168 @@ class Manhuagui(
     }
 
     override fun getFilterList() = FilterList(
-        SortFilter(
-            intl["SORT_BY"],
-            arrayOf(
-                Pair(intl["SORT_BY_POPULAR"], "view"), // Same to popularMangaRequest()
-                Pair(intl["SORT_BY_RELEASE"], ""), // Publish date
-                Pair(intl["SORT_BY_UPDATE"], "update"),
-                Pair(intl["SORT_BY_RATE"], "rate"),
-            ),
-        ),
-        LocaleFilter(
-            intl["BY_REGION"],
-            arrayOf(
-                Pair(intl["REGION_ALL"], ""), // all
-                Pair(intl["REGION_JAPAN"], "japan"),
-                Pair(intl["REGION_HONGKONG"], "hongkong"),
-                Pair(intl["REGION_OTHER"], "other"),
-                Pair(intl["REGION_EUROPE"], "europe"),
-                Pair(intl["REGION_CHINA"], "china"),
-                Pair(intl["REGION_KOREA"], "korea"),
-            ),
-        ),
-        GenreFilter(
-            intl["BY_GENRE"],
-            arrayOf(
-                Pair(intl["GENRE_ALL"], ""),
-                Pair(intl["GENRE_rexue"], "rexue"),
-                Pair(intl["GENRE_maoxian"], "maoxian"),
-                Pair(intl["GENRE_mohuan"], "mohuan"),
-                Pair(intl["GENRE_shengui"], "shengui"),
-                Pair(intl["GENRE_gaoxiao"], "gaoxiao"),
-                Pair(intl["GENRE_mengxi"], "mengxi"),
-                Pair(intl["GENRE_aiqing"], "aiqing"),
-                Pair(intl["GENRE_kehuan"], "kehuan"),
-                Pair(intl["GENRE_mofa"], "mofa"),
-                Pair(intl["GENRE_gedou"], "gedou"),
-                Pair(intl["GENRE_wuxia"], "wuxia"),
-                Pair(intl["GENRE_jizhan"], "jizhan"),
-                Pair(intl["GENRE_zhanzheng"], "zhanzheng"),
-                Pair(intl["GENRE_jingji"], "jingji"),
-                Pair(intl["GENRE_tiyu"], "tiyu"),
-                Pair(intl["GENRE_xiaoyuan"], "xiaoyuan"),
-                Pair(intl["GENRE_shenghuo"], "shenghuo"),
-                Pair(intl["GENRE_lizhi"], "lizhi"),
-                Pair(intl["GENRE_lishi"], "lishi"),
-                Pair(intl["GENRE_weiniang"], "weiniang"),
-                Pair(intl["GENRE_zhainan"], "zhainan"),
-                Pair(intl["GENRE_funv"], "funv"),
-                Pair(intl["GENRE_danmei"], "danmei"),
-                Pair(intl["GENRE_baihe"], "baihe"),
-                Pair(intl["GENRE_hougong"], "hougong"),
-                Pair(intl["GENRE_zhiyu"], "zhiyu"),
-                Pair(intl["GENRE_meishi"], "meishi"),
-                Pair(intl["GENRE_tuili"], "tuili"),
-                Pair(intl["GENRE_xuanyi"], "xuanyi"),
-                Pair(intl["GENRE_kongbu"], "kongbu"),
-                Pair(intl["GENRE_sige"], "sige"),
-                Pair(intl["GENRE_zhichang"], "zhichang"),
-                Pair(intl["GENRE_zhentan"], "zhentan"),
-                Pair(intl["GENRE_shehui"], "shehui"),
-                Pair(intl["GENRE_yinyue"], "yinyue"),
-                Pair(intl["GENRE_wudao"], "wudao"),
-                Pair(intl["GENRE_zazhi"], "zazhi"),
-                Pair(intl["GENRE_heidao"], "heidao"),
-            ),
-        ),
-        ReaderFilter(
-            intl["BY_AUDIENCE"],
-            arrayOf(
-                Pair(intl["AUDIENCE_ALL"], ""),
-                Pair(intl["AUDIENCE_shaonv"], "shaonv"),
-                Pair(intl["AUDIENCE_shaonian"], "shaonian"),
-                Pair(intl["AUDIENCE_qingnian"], "qingnian"),
-                Pair(intl["AUDIENCE_ertong"], "ertong"),
-                Pair(intl["AUDIENCE_tongyong"], "tongyong"),
-            ),
-        ),
-        PublishDateFilter(
-            intl["BY_YEAR"],
-            arrayOf(
-                Pair(intl["YEAR_ALL"], ""),
-                Pair(intl["YEAR_2020"], "2020"),
-                Pair(intl["YEAR_2019"], "2019"),
-                Pair(intl["YEAR_2018"], "2018"),
-                Pair(intl["YEAR_2017"], "2017"),
-                Pair(intl["YEAR_2016"], "2016"),
-                Pair(intl["YEAR_2015"], "2015"),
-                Pair(intl["YEAR_2014"], "2014"),
-                Pair(intl["YEAR_2013"], "2013"),
-                Pair(intl["YEAR_2012"], "2012"),
-                Pair(intl["YEAR_2011"], "2011"),
-                Pair(intl["YEAR_2010"], "2010"),
-                Pair(intl["YEAR_200x"], "200x"),
-                Pair(intl["YEAR_199x"], "199x"),
-                Pair(intl["YEAR_198x"], "198x"),
-                Pair(intl["YEAR_197x"], "197x"),
-            ),
-        ),
-        FirstLetterFilter(
-            intl["BY_FIRST_LETER"],
-            arrayOf(
-                Pair(intl["FIRST_LETTER_ALL"], ""),
-                Pair("A", "a"),
-                Pair("B", "b"),
-                Pair("C", "c"),
-                Pair("D", "d"),
-                Pair("E", "e"),
-                Pair("F", "f"),
-                Pair("G", "g"),
-                Pair("H", "h"),
-                Pair("I", "i"),
-                Pair("J", "j"),
-                Pair("K", "k"),
-                Pair("L", "l"),
-                Pair("M", "m"),
-                Pair("N", "n"),
-                Pair("O", "o"),
-                Pair("P", "p"),
-                Pair("Q", "q"),
-                Pair("R", "r"),
-                Pair("S", "s"),
-                Pair("T", "t"),
-                Pair("U", "u"),
-                Pair("V", "v"),
-                Pair("W", "w"),
-                Pair("X", "x"),
-                Pair("Y", "y"),
-                Pair("Z", "z"),
-                Pair("0-9", "0-9"),
-            ),
-        ),
-        StatusFilter(
-            intl["BY_PROGRESS"],
-            arrayOf(
-                Pair(intl["PROGRESS_ALL"], ""),
-                Pair(intl["PROGRESS_ONGOING"], "lianzai"),
-                Pair(intl["PROGRESS_COMPLETED"], "wanjie"),
-            ),
+        SortFilter(intl),
+        LocaleFilter(intl),
+        GenreFilter(intl),
+        ReaderFilter(intl),
+        PublishDateFilter(intl),
+        FirstLetterFilter(intl),
+        StatusFilter(intl),
+    )
+
+    private class SortFilter(intl: Intl) : UriPartFilter(
+        intl["SORT_BY"],
+        arrayOf(
+            Pair(intl["SORT_BY_POPULAR"], "view"), // Same to popularMangaRequest()
+            Pair(intl["SORT_BY_RELEASE"], ""), // Publish date
+            Pair(intl["SORT_BY_UPDATE"], "update"),
+            Pair(intl["SORT_BY_RATE"], "rate"),
+            Pair(intl["RANK_DAILY"], RANK_PREFIX),
+            Pair(intl["RANK_WEEKLY"], "${RANK_PREFIX}week"),
+            Pair(intl["RANK_MONTHLY"], "${RANK_PREFIX}month"),
+            Pair(intl["RANK_OVERALL"], "${RANK_PREFIX}total"),
         ),
     )
 
-    private class SortFilter(
-        displayName: String,
-        pairs: Array<Pair<String, String>>,
-    ) : UriPartFilter(displayName, pairs)
+    private class LocaleFilter(intl: Intl) : UriPartFilter(
+        intl["BY_REGION"],
+        arrayOf(
+            Pair(intl["REGION_ALL"], ""), // all
+            Pair(intl["REGION_JAPAN"], "japan"),
+            Pair(intl["REGION_HONGKONG"], "hongkong"),
+            Pair(intl["REGION_OTHER"], "other"),
+            Pair(intl["REGION_EUROPE"], "europe"),
+            Pair(intl["REGION_CHINA"], "china"),
+            Pair(intl["REGION_KOREA"], "korea"),
+        ),
+    )
 
-    private class LocaleFilter(
-        displayName: String,
-        pairs: Array<Pair<String, String>>,
-    ) : UriPartFilter(displayName, pairs)
+    private class GenreFilter(intl: Intl) : UriPartFilter(
+        intl["BY_GENRE"],
+        arrayOf(
+            Pair(intl["GENRE_ALL"], ""),
+            Pair(intl["GENRE_rexue"], "rexue"),
+            Pair(intl["GENRE_maoxian"], "maoxian"),
+            Pair(intl["GENRE_mohuan"], "mohuan"),
+            Pair(intl["GENRE_shengui"], "shengui"),
+            Pair(intl["GENRE_gaoxiao"], "gaoxiao"),
+            Pair(intl["GENRE_mengxi"], "mengxi"),
+            Pair(intl["GENRE_aiqing"], "aiqing"),
+            Pair(intl["GENRE_kehuan"], "kehuan"),
+            Pair(intl["GENRE_mofa"], "mofa"),
+            Pair(intl["GENRE_gedou"], "gedou"),
+            Pair(intl["GENRE_wuxia"], "wuxia"),
+            Pair(intl["GENRE_jizhan"], "jizhan"),
+            Pair(intl["GENRE_zhanzheng"], "zhanzheng"),
+            Pair(intl["GENRE_jingji"], "jingji"),
+            Pair(intl["GENRE_tiyu"], "tiyu"),
+            Pair(intl["GENRE_xiaoyuan"], "xiaoyuan"),
+            Pair(intl["GENRE_shenghuo"], "shenghuo"),
+            Pair(intl["GENRE_lizhi"], "lizhi"),
+            Pair(intl["GENRE_lishi"], "lishi"),
+            Pair(intl["GENRE_weiniang"], "weiniang"),
+            Pair(intl["GENRE_zhainan"], "zhainan"),
+            Pair(intl["GENRE_funv"], "funv"),
+            Pair(intl["GENRE_danmei"], "danmei"),
+            Pair(intl["GENRE_baihe"], "baihe"),
+            Pair(intl["GENRE_hougong"], "hougong"),
+            Pair(intl["GENRE_zhiyu"], "zhiyu"),
+            Pair(intl["GENRE_meishi"], "meishi"),
+            Pair(intl["GENRE_tuili"], "tuili"),
+            Pair(intl["GENRE_xuanyi"], "xuanyi"),
+            Pair(intl["GENRE_kongbu"], "kongbu"),
+            Pair(intl["GENRE_sige"], "sige"),
+            Pair(intl["GENRE_zhichang"], "zhichang"),
+            Pair(intl["GENRE_zhentan"], "zhentan"),
+            Pair(intl["GENRE_shehui"], "shehui"),
+            Pair(intl["GENRE_yinyue"], "yinyue"),
+            Pair(intl["GENRE_wudao"], "wudao"),
+            Pair(intl["GENRE_zazhi"], "zazhi"),
+            Pair(intl["GENRE_heidao"], "heidao"),
+        ),
+    )
 
-    private class GenreFilter(
-        displayName: String,
-        pairs: Array<Pair<String, String>>,
-    ) : UriPartFilter(displayName, pairs)
+    private class ReaderFilter(intl: Intl) : UriPartFilter(
+        intl["BY_AUDIENCE"],
+        arrayOf(
+            Pair(intl["AUDIENCE_ALL"], ""),
+            Pair(intl["AUDIENCE_shaonv"], "shaonv"),
+            Pair(intl["AUDIENCE_shaonian"], "shaonian"),
+            Pair(intl["AUDIENCE_qingnian"], "qingnian"),
+            Pair(intl["AUDIENCE_ertong"], "ertong"),
+            Pair(intl["AUDIENCE_tongyong"], "tongyong"),
+        ),
+    )
 
-    private class ReaderFilter(
-        displayName: String,
-        pairs: Array<Pair<String, String>>,
-    ) : UriPartFilter(displayName, pairs)
+    private class PublishDateFilter(intl: Intl) : UriPartFilter(
+        intl["BY_YEAR"],
+        arrayOf(
+            Pair(intl["YEAR_ALL"], ""),
+            Pair(intl["YEAR_2025"], "2025"),
+            Pair(intl["YEAR_2024"], "2024"),
+            Pair(intl["YEAR_2023"], "2023"),
+            Pair(intl["YEAR_2022"], "2022"),
+            Pair(intl["YEAR_2021"], "2021"),
+            Pair(intl["YEAR_2020"], "2020"),
+            Pair(intl["YEAR_2019"], "2019"),
+            Pair(intl["YEAR_2018"], "2018"),
+            Pair(intl["YEAR_2017"], "2017"),
+            Pair(intl["YEAR_2016"], "2016"),
+            Pair(intl["YEAR_2015"], "2015"),
+            Pair(intl["YEAR_2014"], "2014"),
+            Pair(intl["YEAR_2013"], "2013"),
+            Pair(intl["YEAR_2012"], "2012"),
+            Pair(intl["YEAR_2011"], "2011"),
+            Pair(intl["YEAR_2010"], "2010"),
+            Pair(intl["YEAR_200x"], "200x"),
+            Pair(intl["YEAR_199x"], "199x"),
+            Pair(intl["YEAR_198x"], "198x"),
+            Pair(intl["YEAR_197x"], "197x"),
+        ),
+    )
 
-    private class PublishDateFilter(
-        displayName: String,
-        pairs: Array<Pair<String, String>>,
-    ) : UriPartFilter(displayName, pairs)
+    private class FirstLetterFilter(intl: Intl) : UriPartFilter(
+        intl["BY_FIRST_LETER"],
+        arrayOf(
+            Pair(intl["FIRST_LETTER_ALL"], ""),
+            Pair("A", "a"),
+            Pair("B", "b"),
+            Pair("C", "c"),
+            Pair("D", "d"),
+            Pair("E", "e"),
+            Pair("F", "f"),
+            Pair("G", "g"),
+            Pair("H", "h"),
+            Pair("I", "i"),
+            Pair("J", "j"),
+            Pair("K", "k"),
+            Pair("L", "l"),
+            Pair("M", "m"),
+            Pair("N", "n"),
+            Pair("O", "o"),
+            Pair("P", "p"),
+            Pair("Q", "q"),
+            Pair("R", "r"),
+            Pair("S", "s"),
+            Pair("T", "t"),
+            Pair("U", "u"),
+            Pair("V", "v"),
+            Pair("W", "w"),
+            Pair("X", "x"),
+            Pair("Y", "y"),
+            Pair("Z", "z"),
+            Pair("0-9", "0-9"),
+        ),
+    )
 
-    private class FirstLetterFilter(
-        displayName: String,
-        pairs: Array<Pair<String, String>>,
-    ) : UriPartFilter(displayName, pairs)
-
-    private class StatusFilter(
-        displayName: String,
-        pairs: Array<Pair<String, String>>,
-    ) : UriPartFilter(displayName, pairs)
+    private class StatusFilter(intl: Intl) : UriPartFilter(
+        intl["BY_PROGRESS"],
+        arrayOf(
+            Pair(intl["PROGRESS_ALL"], ""),
+            Pair(intl["PROGRESS_ONGOING"], "lianzai"),
+            Pair(intl["PROGRESS_COMPLETED"], "wanjie"),
+        ),
+    )
 
     private fun translateGenre(it: String): String {
         return when (it) {
@@ -753,16 +768,28 @@ class Manhuagui(
 
     companion object {
         private const val SHOW_R18_PREF = "showR18Default"
+        private const val SHOW_R18_PREF_TITLE = "SHOW_R18_PREF_TITLE" // "Show R18 contents"
+        private const val SHOW_R18_PREF_SUMMARY = "SHOW_R18_PREF_SUMMARY" // "Please make sure your IP is not in Manhuagui's ban list, e.g., China mainland IP. Tachiyomi restart required. If you want to close this switch after enabled it, you need to clear cookies in Tachiyomi advanced setting too.
 
         private const val SHOW_ZH_HANT_WEBSITE_PREF = "showZhHantWebsite"
+        private const val SHOW_ZH_HANT_WEBSITE_PREF_TITLE = "SHOW_ZH_HANT_WEBSITE_PREF_TITLE" // "Use traditional chinese version website"
+        private const val SHOW_ZH_HANT_WEBSITE_PREF_SUMMARY = "SHOW_ZH_HANT_WEBSITE_PREF_SUMMARY。" // "You need to restart Tachiyomi"
 
         private const val USE_MIRROR_URL_PREF = "useMirrorWebsitePreference"
+        private const val USE_MIRROR_URL_PREF_TITLE = "USE_MIRROR_URL_PREF_TITLE"
+        private const val USE_MIRROR_URL_PREF_SUMMARY = "USE_MIRROR_URL_PREF_SUMMARY" // "Use mirror url. Some manga may be hidden."
 
         private const val MAINSITE_RATELIMIT_PREF = "mainSiteRatelimitPreference"
+        private const val MAINSITE_RATELIMIT_PREF_TITLE = "MAINSITE_RATELIMIT_PREF_TITLE" // "Ratelimit permits per 10 seconds for main website"
+        private const val MAINSITE_RATELIMIT_PREF_SUMMARY = "MAINSITE_RATELIMIT_PREF_SUMMARY" // "This value affects network request amount for updating library. Lower this value may reduce the chance to get IP Ban, but loading speed will be slower too. Tachiyomi restart required."
         private const val MAINSITE_RATELIMIT_DEFAULT_VALUE = "10"
 
         private const val IMAGE_CDN_RATELIMIT_PREF = "imgCDNRatelimitPreference"
+        private const val IMAGE_CDN_RATELIMIT_PREF_TITLE = "IMAGE_CDN_RATELIMIT_PREF_TITLE" // "Ratelimit permits per second for image CDN"
+        private const val IMAGE_CDN_RATELIMIT_PREF_SUMMARY = "IMAGE_CDN_RATELIMIT_PREF_SUMMARY" // "This value affects network request amount for loading image. Lower this value may reduce the chance to get IP Ban, but loading speed will be slower too. Tachiyomi restart required."
         private const val IMAGE_CDN_RATELIMIT_DEFAULT_VALUE = "4"
+
+        private const val RANK_PREFIX = "rank_"
 
         private val ENTRIES_ARRAY = (1..10).map { i -> i.toString() }.toTypedArray()
         const val PREFIX_ID_SEARCH = "id:"
