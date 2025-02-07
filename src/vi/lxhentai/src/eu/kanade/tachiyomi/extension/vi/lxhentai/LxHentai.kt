@@ -19,7 +19,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import org.jsoup.select.Evaluator
 import rx.Observable
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -30,7 +29,7 @@ class LxHentai : ParsedHttpSource(), ConfigurableSource {
 
     override val name = "LXHentai"
 
-    private val defaultBaseUrl = "https://lxmanga.store"
+    private val defaultBaseUrl = "https://lxmanga.cloud"
 
     override val baseUrl by lazy { getPrefBaseUrl() }
 
@@ -129,15 +128,9 @@ class LxHentai : ParsedHttpSource(), ConfigurableSource {
         genre = document.selectFirst("div.grow div.mt-2 > span:contains(Thể loại:) + span")!!
             .select("a")
             .joinToString { it.text().trim(',', ' ') }
-        description = document.select("p:contains(Tóm tắt) ~ p").joinToString("\n") {
-            it.run {
-                select(Evaluator.Tag("br")).prepend("\\n")
-                this.text().replace("\\n", "\n").replace("\n ", "\n")
-            }
-        }.trim()
-
+        description = document.select("p:contains(Tóm tắt) ~ p").joinToString("\n") { it.wholeText() }.trim()
         thumbnail_url = document.selectFirst(".cover")?.attr("style")?.let {
-            IMAGE_REGEX.find(it)?.groups?.get("img")?.value
+            IMAGE_REGEX.find(it)?.groups?.get(1)?.value
         }
 
         val statusString = document.select("div.grow div.mt-2:contains(Tình trạng) a").first()!!.text()
@@ -323,7 +316,7 @@ class LxHentai : ParsedHttpSource(), ConfigurableSource {
         const val PREFIX_ID_SEARCH = "id:"
 
         val CHAPTER_NUMBER_REGEX = Regex("""[+\-]?([0-9]*[.])?[0-9]+""", RegexOption.IGNORE_CASE)
-        val IMAGE_REGEX = """url\('(?<img>[^']+)""".toRegex()
+        val IMAGE_REGEX = """url\('([^']+)""".toRegex()
 
         private const val DEFAULT_BASE_URL_PREF = "defaultBaseUrl"
         private const val RESTART_APP = "Khởi chạy lại ứng dụng để áp dụng thay đổi."

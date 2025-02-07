@@ -14,7 +14,7 @@ import java.util.Locale
 class HentaiVNPlus :
     Madara(
         "HentaiVN.plus",
-        "https://hentaivn.now",
+        "https://hentaivn.tech",
         "vi",
         dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.ROOT),
     ),

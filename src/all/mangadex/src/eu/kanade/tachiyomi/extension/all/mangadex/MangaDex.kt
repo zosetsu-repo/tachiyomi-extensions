@@ -113,7 +113,7 @@ abstract class MangaDex(final override val lang: String, private val dexLang: St
                     .firstInstanceOrNull<CoverArtDto>()
                     ?.attributes?.fileName
             }
-            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang)
+            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang, preferences.preferExtensionLangTitle)
         }
 
         return MangasPage(mangaList, mangaListDto.hasNextPage)
@@ -177,7 +177,7 @@ abstract class MangaDex(final override val lang: String, private val dexLang: St
                     .firstInstanceOrNull<CoverArtDto>()
                     ?.attributes?.fileName
             }
-            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang)
+            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang, preferences.preferExtensionLangTitle)
         }
 
         return MangasPage(mangaList, chapterListDto.hasNextPage)
@@ -360,7 +360,7 @@ abstract class MangaDex(final override val lang: String, private val dexLang: St
                     .firstInstanceOrNull<CoverArtDto>()
                     ?.attributes?.fileName
             }
-            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang)
+            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang, preferences.preferExtensionLangTitle)
         }
 
         return mangaList
@@ -423,6 +423,8 @@ abstract class MangaDex(final override val lang: String, private val dexLang: St
             dexLang,
             preferences.coverQuality,
             preferences.altTitlesInDesc,
+            preferences.preferExtensionLangTitle,
+            preferences.finalChapterInDesc,
         )
     }
 
@@ -757,11 +759,43 @@ abstract class MangaDex(final override val lang: String, private val dexLang: St
             }
         }
 
+        val preferExtensionLangTitlePref = SwitchPreferenceCompat(screen.context).apply {
+            key = MDConstants.getPreferExtensionLangTitlePrefKey(dexLang)
+            title = helper.intl["prefer_title_in_extension_language"]
+            summary = helper.intl["prefer_title_in_extension_language_summary"]
+            setDefaultValue(true)
+
+            setOnPreferenceChangeListener { _, newValue ->
+                val checkValue = newValue as Boolean
+
+                preferences.edit()
+                    .putBoolean(MDConstants.getPreferExtensionLangTitlePrefKey(dexLang), checkValue)
+                    .commit()
+            }
+        }
+
+        val finalChapterInDescPref = SwitchPreferenceCompat(screen.context).apply {
+            key = MDConstants.getFinalChapterInDescPrefKey(dexLang)
+            title = helper.intl["final_chapter_in_description"]
+            summary = helper.intl["final_chapter_in_description_summary"]
+            setDefaultValue(true)
+
+            setOnPreferenceChangeListener { _, newValue ->
+                val checkValue = newValue as Boolean
+
+                preferences.edit()
+                    .putBoolean(MDConstants.getFinalChapterInDescPrefKey(dexLang), checkValue)
+                    .commit()
+            }
+        }
+
         screen.addPreference(coverQualityPref)
         screen.addPreference(tryUsingFirstVolumeCoverPref)
         screen.addPreference(dataSaverPref)
         screen.addPreference(standardHttpsPortPref)
         screen.addPreference(altTitlesInDescPref)
+        screen.addPreference(preferExtensionLangTitlePref)
+        screen.addPreference(finalChapterInDescPref)
         screen.addPreference(contentRatingPref)
         screen.addPreference(originalLanguagePref)
         screen.addPreference(blockedGroupsPref)
@@ -839,6 +873,12 @@ abstract class MangaDex(final override val lang: String, private val dexLang: St
 
     private val SharedPreferences.altTitlesInDesc
         get() = getBoolean(MDConstants.getAltTitlesInDescPrefKey(dexLang), false)
+
+    private val SharedPreferences.preferExtensionLangTitle
+        get() = getBoolean(MDConstants.getPreferExtensionLangTitlePrefKey(dexLang), true)
+
+    private val SharedPreferences.finalChapterInDesc
+        get() = getBoolean(MDConstants.getFinalChapterInDescPrefKey(dexLang), true)
 
     /**
      * Previous versions of the extension allowed invalid UUID values to be stored in the
