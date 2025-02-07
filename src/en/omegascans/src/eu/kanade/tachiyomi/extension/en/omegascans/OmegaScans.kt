@@ -4,6 +4,7 @@ import android.util.Base64
 import eu.kanade.tachiyomi.multisrc.heancms.HeanCms
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.asObservableSuccess
+import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
@@ -75,7 +76,7 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
 
     override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = runBlocking {
         val primaryChaptersDeferred = async {
-            client.newCall(chapterListRequest(manga)).execute()
+            client.newCall(chapterListRequest(manga)).await()
                 .use(::chapterListParse)
         }
 
@@ -91,7 +92,7 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
             val cubariUrl = "https://cubari.moe/read/api/gist/series/$cubariId/"
 
             client.newCall(GET(cubariUrl, cubariHeaders))
-                .execute()
+                .await()
                 .parseAs<CubariChaptersResponse>()
         }
 
@@ -162,17 +163,13 @@ class OmegaScans : HeanCms("Omega Scans", "https://omegascans.org", "en") {
                         it.jsonPrimitive.content
                     }
 
-                    Page(0, imageUrl = "$page#cubari")
+                    Page(0, imageUrl = page)
                 }
             }
     }
 
     override fun imageRequest(page: Page): Request {
-        return if (page.imageUrl!!.endsWith("#cubari")) {
-            GET(page.imageUrl!!, cubariHeaders)
-        } else {
-            super.imageRequest(page)
-        }
+        return GET("https://x.0ms.dev/q70/" + page.imageUrl!!, cubariHeaders)
     }
 }
 
