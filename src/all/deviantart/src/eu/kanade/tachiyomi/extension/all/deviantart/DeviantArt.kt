@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.SharedPreferences
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
+import androidx.preference.SwitchPreferenceCompat
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.FilterList
@@ -145,8 +146,16 @@ class DeviantArt : HttpSource(), ConfigurableSource {
         val items = document.select("item")
         return items.map {
             SChapter.create().apply {
-                setUrlWithoutDomain(it.selectFirst("link")!!.text())
-                name = it.selectFirst("title")!!.text()
+                val link = it.selectFirst("link")!!
+                setUrlWithoutDomain(link.text())
+                name = if (preferences.includeArtIdInChapterName) {
+                    link.text()
+                        .removeSuffix("/")
+                        .substringAfterLast('/')
+                } else {
+                    it.selectFirst("title")!!.text()
+                }
+
                 date_upload = parseDate(it.selectFirst("pubDate")?.text())
                 scanlator = it.selectFirst("media|credit")?.text()
             }
@@ -205,6 +214,14 @@ class DeviantArt : HttpSource(), ConfigurableSource {
         }
 
         screen.addPreference(artistInTitlePref)
+
+        SwitchPreferenceCompat(screen.context).apply {
+            key = CHAPTER_NAME_PREF
+            title = "Include Art ID in chapter name (to avoid duplicate chapter name)"
+            summaryOff = "Art's Title only"
+            summaryOn = "Art's Title-ID"
+            setDefaultValue(false)
+        }.also(screen::addPreference)
     }
 
     private enum class ArtistInTitle(val text: String) {
@@ -222,7 +239,12 @@ class DeviantArt : HttpSource(), ConfigurableSource {
     private val SharedPreferences.artistInTitle
         get() = getString(ArtistInTitle.PREF_KEY, ArtistInTitle.defaultValue.name)
 
+    private val SharedPreferences.includeArtIdInChapterName
+        get() = getBoolean(CHAPTER_NAME_PREF, false)
+
     companion object {
         private const val SEARCH_FORMAT_MSG = "Please enter a query in the format of gallery:{username} or gallery:{username}/{folderId}"
+
+        private const val CHAPTER_NAME_PREF = "includeArtIdAsChapterNamePref"
     }
 }
