@@ -39,7 +39,9 @@ class MangaReader(
     // =============================== Search ===============================
 
     override fun searchMangaParse(response: Response): MangasPage {
-        var (entries, hasNextPage) = super.searchMangaParse(response)
+        val mangasPage = super.searchMangaParse(response)
+        var entries = mangasPage.mangas
+        val hasNextPage = mangasPage.hasNextPage
         if (preferences.getBoolean(SHOW_VOLUME_PREF, false)) {
             entries = entries.flatMapTo(ArrayList(entries.size * 2)) { manga ->
                 val volume = SManga.create().apply {
