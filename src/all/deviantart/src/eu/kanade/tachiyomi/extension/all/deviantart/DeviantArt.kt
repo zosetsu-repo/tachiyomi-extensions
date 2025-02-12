@@ -214,12 +214,14 @@ class DeviantArt : HttpSource(), ConfigurableSource {
                     ?: "Click tag to show artist's gallery"
                 thumbnail_url = gallery?.selectFirst("img[property=contentUrl]")?.getImgAttr()
                     ?: document.selectFirst("#background-container + div a[data-icon]")?.attr("abs:data-icon")
-                author?.let { genre = "by:$author" }
+                author?.let { genre = "gallery:$author, by:$author" }
+                status = SManga.ONGOING
             }
         } else {
             return SManga.create().apply {
                 // Update higher resolution thumbnail
                 thumbnail_url = document.selectFirst("img[property=contentUrl]")?.getImgAttr()
+                status = SManga.COMPLETED
             }
         }
     }
