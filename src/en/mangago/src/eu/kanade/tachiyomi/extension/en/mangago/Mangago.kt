@@ -319,6 +319,18 @@ class Mangago : ParsedHttpSource(), ConfigurableSource {
         }
     }
 
+    override fun relatedMangaListSelector() = ".also_like + div .listitem, .also-like li"
+
+    override fun relatedMangaFromElement(element: Element): SManga {
+        return element.selectFirst("a[title]")!!.let {
+            SManga.create().apply {
+                title = it.attr("title")
+                setUrlWithoutDomain(it.absUrl("href"))
+                thumbnail_url = element.selectFirst("img")!!.imgAttr()
+            }
+        }
+    }
+
     override fun getFilterList(): FilterList = FilterList(
         Filter.Header("Ignored if using text search"),
         SortFilter(),
@@ -563,6 +575,15 @@ class Mangago : ParsedHttpSource(), ConfigurableSource {
             )
         }
     }
+
+    private fun Element.imgAttr() = when {
+        hasAttr("data-cfsrc") -> absUrl("data-cfsrc")
+        hasAttr("data-src") -> absUrl("data-src")
+        hasAttr("data-lazy-src") -> absUrl("data-lazy-src")
+        hasAttr("srcset") -> absUrl("srcset").substringBefore(" ")
+        else -> absUrl("src")
+    }
+
     private fun isRemoveTitleVersion() = preferences.getBoolean(REMOVE_TITLE_VERSION_PREF, false)
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
