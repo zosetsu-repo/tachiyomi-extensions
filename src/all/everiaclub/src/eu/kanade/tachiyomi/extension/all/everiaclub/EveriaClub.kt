@@ -78,8 +78,8 @@ class EveriaClub() : ParsedHttpSource() {
     // Details
     override fun mangaDetailsParse(document: Document): SManga {
         val manga = SManga.create()
-        manga.title = document.select(".entry-title").text()
-        manga.description = document.select(".entry-title").text()
+        manga.title = document.select(".entry-header .entry-title").text()
+        manga.description = document.select(".entry-content").text()
         val genres = mutableListOf<String>()
         document.select(".post-tags > a").forEach {
             genres.add(it.text())
@@ -145,11 +145,13 @@ class EveriaClub() : ParsedHttpSource() {
 
     class TagFilter : Filter.Text("Tag")
 
+    override fun relatedMangaListSelector() = ".related-post"
+
     private inline fun <reified T> Iterable<*>.findInstance() = find { it is T } as? T
 
     private fun getDate(str: String): Long {
         // At this point(4/12/22), this works with every everiaclub doc
-        val regex = "[0-9]{4}\\/[0-9]{2}\\/[0-9]{2}".toRegex()
+        val regex = "[0-9]{4}/[0-9]{2}/[0-9]{2}".toRegex()
         val match = regex.find(str)
         return runCatching { DATE_FORMAT.parse(match!!.value)?.time }.getOrNull() ?: 0L
     }
