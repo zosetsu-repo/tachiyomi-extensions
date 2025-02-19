@@ -2,6 +2,11 @@ package eu.kanade.tachiyomi.extension.all.koharu
 
 import android.app.Application
 import android.content.SharedPreferences
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
@@ -30,6 +35,8 @@ import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class Koharu(
     override val lang: String = "all",
@@ -46,9 +53,12 @@ class Koharu(
 
     private val apiBooksUrl = "$apiUrl/books"
 
+    private val authUrl = "${baseUrl.replace("://", "://auth.")}/clearance"
+
     override val supportsLatest = true
 
     override val client: OkHttpClient = network.cloudflareClient.newBuilder()
+//        .addInterceptor(WebviewInterceptor(getDomain(), authUrl))
         .rateLimit(1)
         .build()
 
@@ -142,10 +152,35 @@ class Koharu(
     override fun popularMangaRequest(page: Int) = GET("$apiBooksUrl?sort=8&page=$page" + if (searchLang.isNotBlank()) "&s=language!:\"$searchLang\"" else "", lazyHeaders)
     override fun popularMangaParse(response: Response): MangasPage {
         val data = response.parseAs<Books>()
-
+        refreshToken()
         return MangasPage(data.entries.map(::getManga), data.page * data.limit < data.total)
     }
 
+    private fun refreshToken() {
+        val latch = CountDownLatch(1)
+        Handler(Looper.getMainLooper()).post {
+            val webView = WebView(Injekt.get<Application>())
+            with(webView.settings) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+            }
+            webView.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    val view = view!!
+                    val script = "javascript:localStorage['clearance']"
+                    view.evaluateJavascript(script) {
+                        view.stopLoading()
+                        view.destroy()
+                        Log.e("Clearance", it)
+                        latch.countDown()
+                    }
+                }
+            }
+            webView.loadUrl(getDomain())
+        }
+        latch.await(20, TimeUnit.SECONDS)
+    }
     // Search
 
     override fun getFilterList(): FilterList = getFilters()
