@@ -1,8 +1,0 @@
-ext {
-    kmkVersionCode = 1
-    extName = 'ComicExtra'
-    extClass = '.ComicExtra'
-    extVersionCode = 17
-}
-
-apply from: "$rootDir/common.gradle"
