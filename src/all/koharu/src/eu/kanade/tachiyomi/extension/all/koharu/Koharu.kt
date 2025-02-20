@@ -580,6 +580,7 @@ class Koharu(
                             }
                         }
                         if (request.method == "GET") {
+                            // TODO: What to do if it return failed?
                             Log.e("WebviewInterceptor", "Authorization: $authorization")
                             token = authorization?.substringAfterLast(" ")
 //                    latch.await(10, TimeUnit.SECONDS)
@@ -593,6 +594,8 @@ class Koharu(
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     val view = view!!
+                    // Read the saved token in localStorage
+                    // Fixme: this might overwrite the one newly requested
                     val script = "javascript:localStorage['clearance']"
                     view.evaluateJavascript(script) {
                         if (!it.isNullOrBlank() && it != "null") {
