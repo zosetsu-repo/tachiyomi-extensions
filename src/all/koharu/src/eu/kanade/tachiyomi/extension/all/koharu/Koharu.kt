@@ -5,9 +5,10 @@ import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
@@ -22,10 +23,13 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.source.online.HttpSource
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -33,6 +37,7 @@ import rx.Observable
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
@@ -58,8 +63,12 @@ class Koharu(
     override val supportsLatest = true
 
     override val client: OkHttpClient = network.cloudflareClient.newBuilder()
-//        .addInterceptor(WebviewInterceptor(getDomain(), authUrl))
-        .rateLimit(1)
+        .rateLimit(5)
+        .build()
+
+    val interceptedClient: OkHttpClient = network.cloudflareClient.newBuilder()
+        .addInterceptor(::interceptCloudFlareTurnstile)
+        .rateLimit(5)
         .build()
 
     private val json: Json by injectLazy()
@@ -75,7 +84,17 @@ class Koharu(
 
     private fun remadd() = preferences.getBoolean(PREF_REM_ADD, false)
 
-    private fun crt() = preferences.getString(PREF_CRT, DEFAULT_CRT) ?: DEFAULT_CRT
+    internal var token: String? = null
+    internal var authorization: String? = null
+    private var _domainUrl: String? = null
+    internal val domainUrl: String
+        get() {
+            return _domainUrl ?: run {
+                val domain = getDomain()
+                _domainUrl = domain
+                domain
+            }
+        }
 
     private fun getDomain(): String {
         try {
@@ -90,10 +109,9 @@ class Koharu(
     }
 
     private val lazyHeaders by lazy {
-        val domain = getDomain()
         headersBuilder()
-            .set("Referer", "$domain/")
-            .set("Origin", domain)
+            .set("Referer", "$domainUrl/")
+            .set("Origin", domainUrl)
             .build()
     }
 
@@ -137,7 +155,7 @@ class Koharu(
             else -> "0"
         }
 
-        val imagesResponse = client.newCall(GET("$apiBooksUrl/data/$entryId/$entryKey/$id/$public_key/$realQuality?crt=${crt()}", lazyHeaders)).execute()
+        val imagesResponse = interceptedClient.newCall(GET("$apiBooksUrl/data/$entryId/$entryKey/$id/$public_key/$realQuality?crt=$token", lazyHeaders)).execute()
         val images = imagesResponse.parseAs<ImagesInfo>() to realQuality
         return images
     }
@@ -145,14 +163,19 @@ class Koharu(
     // Latest
 
     override fun latestUpdatesRequest(page: Int) = GET("$apiBooksUrl?page=$page" + if (searchLang.isNotBlank()) "&s=language!:\"$searchLang\"" else "", lazyHeaders)
-    override fun latestUpdatesParse(response: Response) = popularMangaParse(response)
+    override fun latestUpdatesParse(response: Response): MangasPage {
+        val data = response.parseAs<Books>()
+//        clearToken()
+        return MangasPage(data.entries.map(::getManga), data.page * data.limit < data.total)
+    }
 
     // Popular
 
     override fun popularMangaRequest(page: Int) = GET("$apiBooksUrl?sort=8&page=$page" + if (searchLang.isNotBlank()) "&s=language!:\"$searchLang\"" else "", lazyHeaders)
     override fun popularMangaParse(response: Response): MangasPage {
         val data = response.parseAs<Books>()
-        refreshToken()
+//        resolveInWebview()
+//        refreshToken()
         return MangasPage(data.entries.map(::getManga), data.page * data.limit < data.total)
     }
 
@@ -177,10 +200,37 @@ class Koharu(
                     }
                 }
             }
-            webView.loadUrl(getDomain())
+            webView.loadUrl(domainUrl)
         }
         latch.await(20, TimeUnit.SECONDS)
     }
+
+    private fun clearToken() {
+        token = null
+        val latch = CountDownLatch(1)
+        Handler(Looper.getMainLooper()).post {
+            val webView = WebView(Injekt.get<Application>())
+            with(webView.settings) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+            }
+            webView.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    val view = view!!
+                    val script = "javascript:localStorage.clear()"
+                    view.evaluateJavascript(script) {
+                        view.stopLoading()
+                        view.destroy()
+                        latch.countDown()
+                    }
+                }
+            }
+            webView.loadUrl(domainUrl)
+        }
+        latch.await(20, TimeUnit.SECONDS)
+    }
+
     // Search
 
     override fun getFilterList(): FilterList = getFilters()
@@ -371,8 +421,16 @@ class Koharu(
 
     // Page List
 
+    override suspend fun getPageList(chapter: SChapter): List<Page> {
+        return interceptedClient.newCall(pageListRequest(chapter))
+            .execute()
+            .let { response ->
+                pageListParse(response)
+            }
+    }
+
     override fun pageListRequest(chapter: SChapter): Request {
-        return POST("$apiBooksUrl/detail/${chapter.url}?crt=${crt()}", lazyHeaders)
+        return POST("$apiBooksUrl/detail/${chapter.url}?crt=$token", lazyHeaders)
     }
 
     override fun pageListParse(response: Response): List<Page> {
@@ -393,12 +451,191 @@ class Koharu(
 
     override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
 
+    override suspend fun fetchRelatedMangaList(manga: SManga): List<SManga> = coroutineScope {
+        async {
+            interceptedClient.newCall(relatedMangaListRequest(manga))
+                .execute()
+                .let { response ->
+                    relatedMangaListParse(response)
+                }
+        }.await()
+    }
+
     override fun relatedMangaListRequest(manga: SManga) =
-        POST("$apiBooksUrl/detail/${manga.url}?crt=${crt()}", lazyHeaders)
+        POST("$apiBooksUrl/detail/${manga.url}?crt=$token", lazyHeaders)
 
     override fun relatedMangaListParse(response: Response): List<SManga> {
         val data = response.parseAs<MangaData>()
         return data.similar.map(::getManga)
+    }
+
+    val authorizedRequestRegex by lazy { Regex("""(.+\?crt=)(.*)""") }
+    fun interceptCloudFlareTurnstile(chain: Interceptor.Chain): Response {
+        if (token == null) {
+            resolveInWebview()
+//                .let {
+//                    token = it.first
+//                    authorization = it.second
+//                }
+        }
+        val request = chain.request()
+
+        val url = request.url.toString()
+        Log.e("Koharu", "Requesting URL: $url")
+        val matchResult = authorizedRequestRegex.find(url) ?: return chain.proceed(request)
+        if (matchResult.groupValues.size == 3) {
+            val requestingUrl = matchResult.groupValues[1]
+            val crt = matchResult.groupValues[2]
+            var newResponse: Response
+            if (crt.isNotBlank() && crt != "null") {
+                // Token already set in URL, just make the request
+                newResponse = chain.proceed(request)
+                if (newResponse.code != 400) return newResponse
+            } else {
+                // Token doesn't include, add token then make request
+                if (token.isNullOrBlank()) resolveInWebview()
+                val newRequest = if (request.method == "POST") {
+                    POST("${requestingUrl}$token", lazyHeaders)
+                } else {
+                    GET("${requestingUrl}$token", lazyHeaders)
+                }
+                Log.e("Koharu", "New request: ${newRequest.url}")
+                newResponse = chain.proceed(newRequest)
+                if (newResponse.code != 400) return newResponse
+            }
+            newResponse.close()
+
+            // Request failed, refresh token then try again
+            resolveInWebview()
+            val newRequest = if (request.method == "POST") {
+                POST("${requestingUrl}$token", lazyHeaders)
+            } else {
+                GET("${requestingUrl}$token", lazyHeaders)
+            }
+            Log.e("Koharu", "New re-request: ${newRequest.url}")
+            newResponse = chain.proceed(newRequest)
+            if (newResponse.code != 400) return newResponse
+            throw IOException("Solve Captcha in WebView")
+        }
+        return chain.proceed(request)
+    }
+
+    private val context: Application by injectLazy()
+    private val handler by lazy { Handler(Looper.getMainLooper()) }
+    fun resolveInWebview(): Pair<String?, String?> {
+        Log.e("WebviewInterceptor", "resolveInWebview")
+        val latch = CountDownLatch(1)
+        var webView: WebView? = null
+//        var token: String? = null
+//        var authorization: String? = null
+        var tokenRequested = false
+
+        handler.post {
+            val webview = WebView(context)
+            webView = webview
+            with(webview.settings) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                useWideViewPort = false
+                loadWithOverviewMode = false
+            }
+
+            webview.webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                    val authHeader = request?.requestHeaders?.get("Authorization")
+                    if (request?.url.toString().contains(authUrl) && authHeader != null) {
+                        authorization = authHeader
+                        if (request.method == "POST") {
+                            Log.e("WebviewInterceptor", "Authorization: $authorization")
+//                    latch.await(10, TimeUnit.SECONDS)
+//                    Log.e("WebviewInterceptor", "clearance set")
+                            tokenRequested = true
+
+                            try {
+                                val noRedirectClient = client.newBuilder().followRedirects(false).build()
+                                val authHeaders = headersBuilder()
+                                    .set("Referer", "$domainUrl/")
+                                    .set("Origin", domainUrl)
+                                    .set("Authorization", authHeader)
+                                    .build()
+                                val response = noRedirectClient.newCall(POST(authUrl, authHeaders)).execute()
+                                response.use {
+                                    if (response.isSuccessful) {
+                                        with(response) {
+                                            token = body.string()
+                                            Log.e("WebviewInterceptor", "Requested token: $token")
+                                        }
+                                        latch.countDown()
+                                    } else {
+                                        println("Request failed with code: ${response.code}")
+                                    }
+                                }
+                            } catch (e: IOException) {
+                                println("Request failed: ${e.message}")
+                                latch.countDown()
+                                return super.shouldInterceptRequest(view, request)
+                            }
+                        }
+                        if (request.method == "GET") {
+                            Log.e("WebviewInterceptor", "Authorization: $authorization")
+                            token = authorization?.substringAfterLast(" ")
+//                    latch.await(10, TimeUnit.SECONDS)
+//                    Log.e("WebviewInterceptor", "clearance set")
+                            tokenRequested = true
+                            latch.countDown()
+                        }
+                    }
+                    return super.shouldInterceptRequest(view, request)
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    val view = view!!
+                    val script = "javascript:localStorage['clearance']"
+                    view.evaluateJavascript(script) {
+                        if (!it.isNullOrBlank() && it != "null") {
+                            token = it
+                            Log.e("WebviewInterceptor", "Clearance: $token")
+                            latch.countDown()
+                        }
+                        Log.e("WebviewInterceptor", "Page finished")
+                    }
+                }
+            }
+
+            webview.loadUrl("$domainUrl/")
+
+//            latch.await(5, TimeUnit.SECONDS)
+//
+//            val script = "javascript:localStorage['clearance']"
+//            webView?.evaluateJavascript(script) {
+//                Log.e("WebviewInterceptor", "Clearance: $it / $token - Authorization: $authorization")
+//            }
+//
+//            latch.await(5, TimeUnit.SECONDS)
+//
+//            latch.countDown()
+        }
+
+        latch.await(20, TimeUnit.SECONDS)
+
+        handler.post {
+            if (token.isNullOrBlank()) {
+                val script = "javascript:localStorage['clearance']"
+                webView?.evaluateJavascript(script) {
+                    if (!it.isNullOrBlank() && it != "null") {
+                        token = it
+                    }
+                    Log.e("WebviewInterceptor", "Clearance: $it / $token - Authorization: $authorization")
+                }
+            }
+
+            webView?.stopLoading()
+            webView?.destroy()
+            webView = null
+        }
+
+        return token to authorization
     }
 
     // Settings
@@ -420,13 +657,6 @@ class Koharu(
                 "Reload manga to apply changes to loaded manga."
             setDefaultValue(false)
         }.also(screen::addPreference)
-
-        EditTextPreference(screen.context).apply {
-            key = PREF_CRT
-            title = "CRT value"
-            summary = preferences.getString(PREF_CRT, DEFAULT_CRT) ?: DEFAULT_CRT
-            setDefaultValue(DEFAULT_CRT)
-        }.also(screen::addPreference)
     }
 
     private inline fun <reified T> Response.parseAs(): T {
@@ -437,7 +667,5 @@ class Koharu(
         const val PREFIX_ID_KEY_SEARCH = "id:"
         private const val PREF_IMAGERES = "pref_image_quality"
         private const val PREF_REM_ADD = "pref_remove_additional"
-        private const val PREF_CRT = "pref_crt"
-        private const val DEFAULT_CRT = "75af94f0-03c0-4c80-83c6-5e7b28daf4a0"
     }
 }
