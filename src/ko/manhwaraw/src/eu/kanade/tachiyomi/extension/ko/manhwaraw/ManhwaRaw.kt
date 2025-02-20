@@ -119,7 +119,7 @@ class ManhwaRaw : Madara("ManhwaRaw", "https://manhwaraw.com", "ko") {
             Filter.Header("Browsing"),
             GenreList(
                 title = intl["genre_filter_title"],
-                options = listOf(Pair("<${intl["genre_filter_title"]}>", "")) +
+                options = listOf(Genre("<${intl["genre_filter_title"]}>", "")) +
                     genresList,
             ),
             AuthorList(
@@ -137,8 +137,8 @@ class ManhwaRaw : Madara("ManhwaRaw", "https://manhwaraw.com", "ko") {
         return FilterList(filters)
     }
 
-    private class GenreList(title: String, options: List<Pair<String, String>>, state: Int = 0) :
-        UriPartFilter(title, options.toTypedArray(), state)
+    private class GenreList(title: String, options: List<Genre>, state: Int = 0) :
+        UriPartFilter(title, options.map { it.name to it.id }.toTypedArray(), state)
 
     private class AuthorList(title: String, options: List<Pair<String, String>>, state: Int = 0) :
         UriPartFilter(title, options.toTypedArray(), state)
@@ -158,58 +158,58 @@ class ManhwaRaw : Madara("ManhwaRaw", "https://manhwaraw.com", "ko") {
         intl["order_by_filter_views"] to "views",
     )
 
-    // console.log([...document.querySelectorAll(".wp-manga-section .manga-genres-class-name .genres li a")].map((el) => `Pair("${el.innerText}", "${el.getAttribute('href')}"),`).join('\n'))
-    private val genresList = listOf(
-        Pair("Action", "action"),
-        Pair("Adult", "adult"),
-        Pair("Adventure", "adventure"),
-        Pair("Anime", "anime"),
-        Pair("Boy's Love", "boy-love"),
-        Pair("Campus", "campus"),
-        Pair("Comedy", "comedy"),
-        Pair("Comic", "comic"),
-        Pair("Crime", "crime"),
-        Pair("Dance", "dance"),
-        Pair("Doujinshi", "doujinshi"),
-        Pair("Drama", "drama"),
-        Pair("Ecchi", "ecchi"),
-        Pair("Fantasy", "fantasy"),
-        Pair("Girls's Love", "girls-love"),
-        Pair("Harem", "harem"),
-        Pair("Hentai", "hentai"),
-        Pair("Historical", "historical"),
-        Pair("Horror", "horror"),
-        Pair("Isekai", "isekai"),
-        Pair("Josei", "josei"),
-        Pair("Manga", "manga"),
-        Pair("Manhua", "manhua"),
-        Pair("Manhwa", "manhwa"),
-        Pair("manhwa raw", "manhwa-raw"),
-        Pair("Martial Arts", "martial-arts"),
-        Pair("Mature", "mature"),
-        Pair("Mecha", "mecha"),
-        Pair("Military", "military"),
-        Pair("Mystery", "mystery"),
-        Pair("Raw", "raw"),
-        Pair("Reincarnation", "reincarnation"),
-        Pair("Revenge", "revenge"),
-        Pair("Romance", "romance"),
-        Pair("School Life", "school-life"),
-        Pair("Sci-fi", "sci-fi"),
-        Pair("Secret Relationship", "secret-relationship"),
-        Pair("Seinen", "seinen"),
-        Pair("Shoujo", "shoujo"),
-        Pair("Shoujo Ai", "shoujo-ai"),
-        Pair("Shounen", "shounen"),
-        Pair("Slice of Life", "slice-of-life"),
-        Pair("Smut", "smut"),
-        Pair("Sports", "sports"),
-        Pair("Supernatural", "supernatural"),
-        Pair("Thriller", "thriller"),
-        Pair("Tragedy", "tragedy"),
-        Pair("Webtoon", "webtoon"),
-        Pair("Yaoi", "yaoi"),
-        Pair("Yuri", "yuri"),
+    // console.log([...document.querySelectorAll(".wp-manga-section .manga-genres-class-name .genres li a")].map((el) => `Genre("${el.innerText}", "${el.getAttribute('href')}"),`).join('\n'))
+    override var genresList = listOf(
+        Genre("Action", "action"),
+        Genre("Adult", "adult"),
+        Genre("Adventure", "adventure"),
+        Genre("Anime", "anime"),
+        Genre("Boy's Love", "boy-love"),
+        Genre("Campus", "campus"),
+        Genre("Comedy", "comedy"),
+        Genre("Comic", "comic"),
+        Genre("Crime", "crime"),
+        Genre("Dance", "dance"),
+        Genre("Doujinshi", "doujinshi"),
+        Genre("Drama", "drama"),
+        Genre("Ecchi", "ecchi"),
+        Genre("Fantasy", "fantasy"),
+        Genre("Girls's Love", "girls-love"),
+        Genre("Harem", "harem"),
+        Genre("Hentai", "hentai"),
+        Genre("Historical", "historical"),
+        Genre("Horror", "horror"),
+        Genre("Isekai", "isekai"),
+        Genre("Josei", "josei"),
+        Genre("Manga", "manga"),
+        Genre("Manhua", "manhua"),
+        Genre("Manhwa", "manhwa"),
+        Genre("manhwa raw", "manhwa-raw"),
+        Genre("Martial Arts", "martial-arts"),
+        Genre("Mature", "mature"),
+        Genre("Mecha", "mecha"),
+        Genre("Military", "military"),
+        Genre("Mystery", "mystery"),
+        Genre("Raw", "raw"),
+        Genre("Reincarnation", "reincarnation"),
+        Genre("Revenge", "revenge"),
+        Genre("Romance", "romance"),
+        Genre("School Life", "school-life"),
+        Genre("Sci-fi", "sci-fi"),
+        Genre("Secret Relationship", "secret-relationship"),
+        Genre("Seinen", "seinen"),
+        Genre("Shoujo", "shoujo"),
+        Genre("Shoujo Ai", "shoujo-ai"),
+        Genre("Shounen", "shounen"),
+        Genre("Slice of Life", "slice-of-life"),
+        Genre("Smut", "smut"),
+        Genre("Sports", "sports"),
+        Genre("Supernatural", "supernatural"),
+        Genre("Thriller", "thriller"),
+        Genre("Tragedy", "tragedy"),
+        Genre("Webtoon", "webtoon"),
+        Genre("Yaoi", "yaoi"),
+        Genre("Yuri", "yuri"),
     )
 
     override fun oldXhrChaptersRequest(mangaId: String): Request {

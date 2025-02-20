@@ -6,7 +6,6 @@ import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.util.asJsoup
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
@@ -69,7 +68,7 @@ class ManyComic : Madara("ManyComic", "https://manycomic.com", "en") {
     override fun searchMangaSelector() = popularMangaSelector()
 
     override fun getFilterList(): FilterList {
-        launchIO { fetchGenres_() }
+        launchIO { fetchGenres() }
 
         val filters: MutableList<Filter<out Any>> = mutableListOf(
             OrderByFilter(
@@ -79,18 +78,18 @@ class ManyComic : Madara("ManyComic", "https://manycomic.com", "en") {
             ),
         )
 
-        if (genresList.isNotEmpty()) {
-            filters += listOf(
+        filters += if (genresList.isNotEmpty()) {
+            listOf(
                 Filter.Separator(),
                 Filter.Header("Genre filter is ignored when searching by title"),
                 GenreFilter(
                     title = intl["genre_filter_title"],
-                    options = genresList,
+                    options = listOf(Genre("<All>", "")) + genresList,
                     state = 0,
                 ),
             )
-        } else if (fetchGenres) {
-            filters += listOf(
+        } else {
+            listOf(
                 Filter.Separator(),
                 Filter.Header(intl["genre_missing_warning"]),
             )
@@ -107,22 +106,6 @@ class ManyComic : Madara("ManyComic", "https://manycomic.com", "en") {
         intl["order_by_filter_views"] to "views",
         intl["order_by_filter_new"] to "new-manga",
     )
-
-    private var genresList: List<Genre> = emptyList()
-    private var fetchGenresAttempts: Int = 0
-
-    private fun fetchGenres_() {
-        if (fetchGenres && fetchGenresAttempts < 3 && genresList.isEmpty()) {
-            try {
-                genresList = listOf(Genre("<All>", "")) +
-                    client.newCall(genresRequest()).execute()
-                        .use { parseGenres(it.asJsoup()) }
-            } catch (_: Exception) {
-            } finally {
-                fetchGenresAttempts++
-            }
-        }
-    }
 
     private class GenreFilter(title: String, options: List<Genre>, state: Int = 0) :
         UriPartFilter(title, options.map { Pair(it.name, it.id) }.toTypedArray(), state)
