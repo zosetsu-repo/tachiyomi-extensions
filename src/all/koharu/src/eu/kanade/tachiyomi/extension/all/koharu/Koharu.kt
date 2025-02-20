@@ -503,6 +503,7 @@ class Koharu(
                 newResponse = chain.proceed(newRequest)
                 if (newResponse.code != 400) return newResponse
             }
+            Log.e("Koharu", "Response code: ${newResponse.code}")
             newResponse.close()
 
             // Request failed, refresh token then try again
@@ -515,7 +516,7 @@ class Koharu(
             Log.e("Koharu", "New re-request: ${newRequest.url}")
             newResponse = chain.proceed(newRequest)
             if (newResponse.code != 400) return newResponse
-            throw IOException("Solve Captcha in WebView")
+            throw IOException("Solve Captcha in WebView (${newResponse.code})")
         }
         return chain.proceed(request)
     }
@@ -564,6 +565,7 @@ class Koharu(
                                     if (response.isSuccessful) {
                                         with(response) {
                                             token = body.string()
+                                                .removeSurrounding("\"")
                                             Log.e("WebviewInterceptor", "Requested token: $token")
                                         }
                                         latch.countDown()
@@ -595,6 +597,7 @@ class Koharu(
                     view.evaluateJavascript(script) {
                         if (!it.isNullOrBlank() && it != "null") {
                             token = it
+                                .removeSurrounding("\"")
                             Log.e("WebviewInterceptor", "Clearance: $token")
                             latch.countDown()
                         }
@@ -625,6 +628,7 @@ class Koharu(
                 webView?.evaluateJavascript(script) {
                     if (!it.isNullOrBlank() && it != "null") {
                         token = it
+                            .removeSurrounding("\"")
                     }
                     Log.e("WebviewInterceptor", "Clearance: $it / $token - Authorization: $authorization")
                 }
