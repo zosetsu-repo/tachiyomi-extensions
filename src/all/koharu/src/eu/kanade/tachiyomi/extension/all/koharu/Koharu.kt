@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.extension.all.koharu
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.SharedPreferences
 import android.os.Handler
@@ -163,72 +164,14 @@ class Koharu(
     // Latest
 
     override fun latestUpdatesRequest(page: Int) = GET("$apiBooksUrl?page=$page" + if (searchLang.isNotBlank()) "&s=language!:\"$searchLang\"" else "", lazyHeaders)
-    override fun latestUpdatesParse(response: Response): MangasPage {
-        val data = response.parseAs<Books>()
-//        clearToken()
-        return MangasPage(data.entries.map(::getManga), data.page * data.limit < data.total)
-    }
+    override fun latestUpdatesParse(response: Response) = popularMangaParse(response)
 
     // Popular
 
     override fun popularMangaRequest(page: Int) = GET("$apiBooksUrl?sort=8&page=$page" + if (searchLang.isNotBlank()) "&s=language!:\"$searchLang\"" else "", lazyHeaders)
     override fun popularMangaParse(response: Response): MangasPage {
         val data = response.parseAs<Books>()
-//        resolveInWebview()
-//        refreshToken()
         return MangasPage(data.entries.map(::getManga), data.page * data.limit < data.total)
-    }
-
-    private fun refreshToken() {
-        val latch = CountDownLatch(1)
-        Handler(Looper.getMainLooper()).post {
-            val webView = WebView(Injekt.get<Application>())
-            with(webView.settings) {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                databaseEnabled = true
-            }
-            webView.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    val view = view!!
-                    val script = "javascript:localStorage['clearance']"
-                    view.evaluateJavascript(script) {
-                        view.stopLoading()
-                        view.destroy()
-                        Log.e("Clearance", it)
-                        latch.countDown()
-                    }
-                }
-            }
-            webView.loadUrl(domainUrl)
-        }
-        latch.await(20, TimeUnit.SECONDS)
-    }
-
-    private fun clearToken() {
-        token = null
-        val latch = CountDownLatch(1)
-        Handler(Looper.getMainLooper()).post {
-            val webView = WebView(Injekt.get<Application>())
-            with(webView.settings) {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                databaseEnabled = true
-            }
-            webView.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    val view = view!!
-                    val script = "javascript:localStorage.clear()"
-                    view.evaluateJavascript(script) {
-                        view.stopLoading()
-                        view.destroy()
-                        latch.countDown()
-                    }
-                }
-            }
-            webView.loadUrl(domainUrl)
-        }
-        latch.await(20, TimeUnit.SECONDS)
     }
 
     // Search
@@ -473,10 +416,6 @@ class Koharu(
     fun interceptCloudFlareTurnstile(chain: Interceptor.Chain): Response {
         if (token == null) {
             resolveInWebview()
-//                .let {
-//                    token = it.first
-//                    authorization = it.second
-//                }
         }
         val request = chain.request()
 
@@ -527,12 +466,12 @@ class Koharu(
 
     private val context: Application by injectLazy()
     private val handler by lazy { Handler(Looper.getMainLooper()) }
+
+    @SuppressLint("SetJavaScriptEnabled")
     fun resolveInWebview(): Pair<String?, String?> {
         Log.e("WebviewInterceptor", "resolveInWebview")
         val latch = CountDownLatch(1)
         var webView: WebView? = null
-//        var token: String? = null
-//        var authorization: String? = null
         var tokenRequested = false
 
         handler.post {
@@ -553,8 +492,6 @@ class Koharu(
                         authorization = authHeader
                         if (request.method == "POST") {
                             Log.e("WebviewInterceptor", "Authorization: $authorization")
-//                    latch.await(10, TimeUnit.SECONDS)
-//                    Log.e("WebviewInterceptor", "clearance set")
                             tokenRequested = true
 
                             try {
@@ -584,11 +521,12 @@ class Koharu(
                             }
                         }
                         if (request.method == "GET") {
-                            // TODO: What to do if it return failed?
+                            // TODO: What to do if it return failed? => should not countdown, let the POST method request again
+                            // Can try mitigate a wrong clearance
+                            // Token might be rechecked here but just let it fails then we will reset and request a new one
+                            // Normally this might not occur because old token should already be returned via onPageFinished
                             Log.e("WebviewInterceptor", "Authorization: $authorization")
                             token = authorization?.substringAfterLast(" ")
-//                    latch.await(10, TimeUnit.SECONDS)
-//                    Log.e("WebviewInterceptor", "clearance set")
                             tokenRequested = true
                             latch.countDown()
                         }
@@ -597,7 +535,7 @@ class Koharu(
                 }
 
                 override fun onPageFinished(view: WebView?, url: String?) {
-                    val view = view!!
+                    if (view == null) return
                     // Read the saved token in localStorage
                     // Fixme: this might overwrite the one newly requested
                     val script = "javascript:localStorage['clearance']"
@@ -614,17 +552,6 @@ class Koharu(
             }
 
             webview.loadUrl("$domainUrl/")
-
-//            latch.await(5, TimeUnit.SECONDS)
-//
-//            val script = "javascript:localStorage['clearance']"
-//            webView?.evaluateJavascript(script) {
-//                Log.e("WebviewInterceptor", "Clearance: $it / $token - Authorization: $authorization")
-//            }
-//
-//            latch.await(5, TimeUnit.SECONDS)
-//
-//            latch.countDown()
         }
 
         latch.await(20, TimeUnit.SECONDS)
@@ -647,6 +574,33 @@ class Koharu(
         }
 
         return token to authorization
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun clearToken() {
+        val latch = CountDownLatch(1)
+        Handler(Looper.getMainLooper()).post {
+            val webView = WebView(Injekt.get<Application>())
+            with(webView.settings) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+            }
+            webView.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    if (view == null) return
+                    val script = "javascript:localStorage.clear()"
+                    view.evaluateJavascript(script) {
+                        token = null
+                        view.stopLoading()
+                        view.destroy()
+                        latch.countDown()
+                    }
+                }
+            }
+            webView.loadUrl(domainUrl)
+        }
+        latch.await(20, TimeUnit.SECONDS)
     }
 
     // Settings
