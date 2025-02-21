@@ -67,8 +67,8 @@ class Koharu(
         .rateLimit(5)
         .build()
 
-    val interceptedClient: OkHttpClient = network.cloudflareClient.newBuilder()
-        .addInterceptor(::interceptCloudFlareTurnstile)
+    private val interceptedClient: OkHttpClient = network.cloudflareClient.newBuilder()
+        .addInterceptor(::cloudflareTurnstileInterceptor)
         .rateLimit(5)
         .build()
 
@@ -85,8 +85,6 @@ class Koharu(
 
     private fun remadd() = preferences.getBoolean(PREF_REM_ADD, false)
 
-    internal var token: String? = null
-    internal var authorization: String? = null
     private var _domainUrl: String? = null
     internal val domainUrl: String
         get() {
@@ -412,8 +410,19 @@ class Koharu(
         return data.similar.map(::getManga)
     }
 
-    val authorizedRequestRegex by lazy { Regex("""(.+\?crt=)(.*)""") }
-    fun interceptCloudFlareTurnstile(chain: Interceptor.Chain): Response {
+
+    /* Cloudflare Turnstile interceptor */
+
+    private fun authHeaders(authorization: String) =
+        headersBuilder()
+            .set("Referer", "$domainUrl/")
+            .set("Origin", domainUrl)
+            .set("Authorization", authorization)
+            .build()
+
+    private val authorizedRequestRegex by lazy { Regex("""(.+\?crt=)(.*)""") }
+
+    fun cloudflareTurnstileInterceptor(chain: Interceptor.Chain): Response {
         if (token == null) {
             resolveInWebview()
         }
@@ -469,7 +478,7 @@ class Koharu(
 
     @SuppressLint("SetJavaScriptEnabled")
     fun resolveInWebview(): Pair<String?, String?> {
-        Log.e("WebviewInterceptor", "resolveInWebview")
+        Log.e("TurnstileInterceptor", "resolveInWebview")
         val latch = CountDownLatch(1)
         var webView: WebView? = null
         var tokenRequested = false
@@ -491,23 +500,19 @@ class Koharu(
                     if (request?.url.toString().contains(authUrl) && authHeader != null) {
                         authorization = authHeader
                         if (request.method == "POST") {
-                            Log.e("WebviewInterceptor", "Authorization: $authorization")
+                            Log.e("TurnstileInterceptor", "Authorization: $authorization")
                             tokenRequested = true
 
                             try {
                                 val noRedirectClient = client.newBuilder().followRedirects(false).build()
-                                val authHeaders = headersBuilder()
-                                    .set("Referer", "$domainUrl/")
-                                    .set("Origin", domainUrl)
-                                    .set("Authorization", authHeader)
-                                    .build()
+                                val authHeaders = authHeaders(authHeader)
                                 val response = noRedirectClient.newCall(POST(authUrl, authHeaders)).execute()
                                 response.use {
                                     if (response.isSuccessful) {
                                         with(response) {
                                             token = body.string()
                                                 .removeSurrounding("\"")
-                                            Log.e("WebviewInterceptor", "Requested token: $token")
+                                            Log.e("TurnstileInterceptor", "Requested token: $token")
                                         }
                                         latch.countDown()
                                     } else {
@@ -525,7 +530,7 @@ class Koharu(
                             // Can try mitigate a wrong clearance
                             // Token might be rechecked here but just let it fails then we will reset and request a new one
                             // Normally this might not occur because old token should already be returned via onPageFinished
-                            Log.e("WebviewInterceptor", "Authorization: $authorization")
+                            Log.e("TurnstileInterceptor", "Authorization: $authorization")
                             token = authorization?.substringAfterLast(" ")
                             tokenRequested = true
                             latch.countDown()
@@ -543,10 +548,10 @@ class Koharu(
                         if (!it.isNullOrBlank() && it != "null") {
                             token = it
                                 .removeSurrounding("\"")
-                            Log.e("WebviewInterceptor", "Clearance: $token")
+                            Log.e("TurnstileInterceptor", "Clearance: $token")
                             latch.countDown()
                         }
-                        Log.e("WebviewInterceptor", "Page finished")
+                        Log.e("TurnstileInterceptor", "Page finished")
                     }
                 }
             }
@@ -564,7 +569,7 @@ class Koharu(
                         token = it
                             .removeSurrounding("\"")
                     }
-                    Log.e("WebviewInterceptor", "Clearance: $it / $token - Authorization: $authorization")
+                    Log.e("TurnstileInterceptor", "Clearance: $it / $token - Authorization: $authorization")
                 }
             }
 
@@ -579,8 +584,8 @@ class Koharu(
     @SuppressLint("SetJavaScriptEnabled")
     private fun clearToken() {
         val latch = CountDownLatch(1)
-        Handler(Looper.getMainLooper()).post {
-            val webView = WebView(Injekt.get<Application>())
+        handler.post {
+            val webView = WebView(context)
             with(webView.settings) {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -632,5 +637,8 @@ class Koharu(
         const val PREFIX_ID_KEY_SEARCH = "id:"
         private const val PREF_IMAGERES = "pref_image_quality"
         private const val PREF_REM_ADD = "pref_remove_additional"
+
+        private var token: String? = null
+        private var authorization: String? = null
     }
 }
