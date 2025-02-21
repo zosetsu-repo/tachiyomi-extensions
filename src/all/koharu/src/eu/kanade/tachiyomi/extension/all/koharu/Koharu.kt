@@ -487,10 +487,12 @@ class Koharu(
             val requestingUrl = matchResult.groupValues[1]
             val crt = matchResult.groupValues[2]
             var newResponse: Response
+
             if (crt.isNotBlank() && crt != "null") {
                 // Token already set in URL, just make the request
                 newResponse = chain.proceed(request)
-                if (newResponse.code != 400) return newResponse
+                Log.e("Koharu", "Response code: ${newResponse.code}")
+                if (newResponse.code !in listOf(400, 403)) return newResponse
             } else {
                 // Token doesn't include, add token then make request
                 if (token.isNullOrBlank()) resolveInWebview()
@@ -501,12 +503,13 @@ class Koharu(
                 }
                 Log.e("Koharu", "New request: ${newRequest.url}")
                 newResponse = chain.proceed(newRequest)
-                if (newResponse.code != 400) return newResponse
+                Log.e("Koharu", "Response code: ${newResponse.code}")
+                if (newResponse.code !in listOf(400, 403)) return newResponse
             }
-            Log.e("Koharu", "Response code: ${newResponse.code}")
             newResponse.close()
 
             // Request failed, refresh token then try again
+            clearToken()
             resolveInWebview()
             val newRequest = if (request.method == "POST") {
                 POST("${requestingUrl}$token", lazyHeaders)
@@ -515,7 +518,8 @@ class Koharu(
             }
             Log.e("Koharu", "New re-request: ${newRequest.url}")
             newResponse = chain.proceed(newRequest)
-            if (newResponse.code != 400) return newResponse
+            Log.e("Koharu", "Response code: ${newResponse.code}")
+            if (newResponse.code !in listOf(400, 403)) return newResponse
             throw IOException("Solve Captcha in WebView (${newResponse.code})")
         }
         return chain.proceed(request)
