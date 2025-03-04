@@ -192,6 +192,27 @@ class Koharu(
                         }
                     }
 
+                    is GenreFilter -> {
+                        val included = filter.state
+                            .filter { it.isIncluded() }
+                            .joinToString(",") { it.id.toString() }
+                        val excluded = filter.state
+                            .filter { it.isExcluded() }
+                            .joinToString(",") { it.id.toString() }
+                        if (included.isNotEmpty()) {
+                            addQueryParameter("include", included)
+                        }
+                        if (excluded.isNotEmpty()) {
+                            addQueryParameter("exclude", excluded)
+                        }
+                    }
+
+                    is GenreConditionFilter -> {
+                        if (filter.state > 0) {
+                            addQueryParameter(filter.param, filter.toUriPart())
+                        }
+                    }
+
                     is TextFilter -> {
                         if (filter.state.isNotEmpty()) {
                             val tags = filter.state.split(",").filter(String::isNotBlank).joinToString(",")
