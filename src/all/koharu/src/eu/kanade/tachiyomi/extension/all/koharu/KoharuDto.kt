@@ -25,7 +25,7 @@ class Entry(
 )
 
 @Serializable
-class MangaEntry(
+class MangaDetail(
     val id: Int,
     val title: String,
     val key: String,

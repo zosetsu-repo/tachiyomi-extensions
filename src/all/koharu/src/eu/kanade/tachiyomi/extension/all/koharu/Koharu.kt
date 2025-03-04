@@ -109,7 +109,7 @@ class Koharu(
         thumbnail_url = book.thumbnail.path
     }
 
-    private fun getImagesByMangaEntry(entry: MangaData, entryId: String, entryKey: String): Pair<ImagesInfo, String> {
+    private fun getImagesByMangaData(entry: MangaData, entryId: String, entryKey: String): Pair<ImagesInfo, String> {
         val data = entry.data
         fun getIPK(
             ori: DataKey?,
@@ -170,7 +170,7 @@ class Koharu(
             query.startsWith(PREFIX_ID_KEY_SEARCH) -> {
                 val ipk = query.removePrefix(PREFIX_ID_KEY_SEARCH)
                 val response = client.newCall(GET("$apiBooksUrl/detail/$ipk", lazyHeaders)).execute()
-                Observable.just(searchMangaParse2(response))
+                Observable.just(mangaDetailPage(response))
             }
             else -> super.fetchSearchManga(page, query, filters)
         }
@@ -213,17 +213,11 @@ class Koharu(
 
     override fun searchMangaParse(response: Response) = popularMangaParse(response)
 
-    private fun searchMangaParse2(response: Response): MangasPage {
-        val entry = response.parseAs<MangaEntry>()
+    private fun mangaDetailPage(response: Response): MangasPage {
+        val mangaDetail = response.parseAs<MangaDetail>()
 
         return MangasPage(
-            listOf(
-                SManga.create().apply {
-                    setUrlWithoutDomain("${entry.id}/${entry.key}")
-                    title = if (remadd()) entry.title.shortenTitle() else entry.title
-                    thumbnail_url = entry.thumbnails.base + entry.thumbnails.main.path
-                },
-            ),
+            listOf(mangaDetail.toSManga()),
             false,
         )
     }
@@ -234,11 +228,11 @@ class Koharu(
     }
 
     override fun mangaDetailsParse(response: Response): SManga {
-        return response.parseAs<MangaEntry>().toSManga()
+        return response.parseAs<MangaDetail>().toSManga()
     }
 
     private val dateReformat = SimpleDateFormat("EEEE, d MMM yyyy HH:mm (z)", Locale.ENGLISH)
-    private fun MangaEntry.toSManga() = SManga.create().apply {
+    private fun MangaDetail.toSManga() = SManga.create().apply {
         val artists = mutableListOf<String>()
         val circles = mutableListOf<String>()
         val parodies = mutableListOf<String>()
@@ -270,6 +264,9 @@ class Koharu(
 
         var appended = false
         fun List<String>.joinAndCapitalizeEach(): String? = this.emptyToNull()?.joinToString { it.capitalizeEach() }?.apply { appended = true }
+
+        setUrlWithoutDomain("$id/$key")
+        thumbnail_url = thumbnails.base + thumbnails.main.path
         title = if (remadd()) this@toSManga.title.shortenTitle() else this@toSManga.title
 
         author = (circles.emptyToNull() ?: artists).joinToString { it.capitalizeEach() }
@@ -337,7 +334,7 @@ class Koharu(
     }
 
     override fun chapterListParse(response: Response): List<SChapter> {
-        val manga = response.parseAs<MangaEntry>()
+        val manga = response.parseAs<MangaDetail>()
         return listOf(
             SChapter.create().apply {
                 name = "Chapter"
@@ -368,7 +365,7 @@ class Koharu(
         val url = response.request.url.toString()
         val matches = Regex("""/detail/(\d+)/([a-z\d]+)""").find(url)
         if (matches == null || matches.groupValues.size < 3) return emptyList()
-        val imagesInfo = getImagesByMangaEntry(mangaData, matches.groupValues[1], matches.groupValues[2])
+        val imagesInfo = getImagesByMangaData(mangaData, matches.groupValues[1], matches.groupValues[2])
 
         return imagesInfo.first.entries.mapIndexed { index, image ->
             Page(index, imageUrl = "${imagesInfo.first.base}/${image.path}?w=${imagesInfo.second}")
