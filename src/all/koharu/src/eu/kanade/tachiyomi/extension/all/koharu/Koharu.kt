@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.getFilters
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.interceptor.rateLimit
@@ -150,12 +151,12 @@ class Koharu(
 
     // Latest
 
-    override fun latestUpdatesRequest(page: Int) = GET("$apiBooksUrl?page=$page" + if (searchLang.isNotBlank()) "&s=language!:\"$searchLang\"" else "", lazyHeaders)
+    override fun latestUpdatesRequest(page: Int) = GET("$apiBooksUrl?page=$page" + if (searchLang.isNotBlank()) "&s=language:\"^$searchLang$\"" else "", lazyHeaders)
     override fun latestUpdatesParse(response: Response) = popularMangaParse(response)
 
     // Popular
 
-    override fun popularMangaRequest(page: Int) = GET("$apiBooksUrl?sort=8&page=$page" + if (searchLang.isNotBlank()) "&s=language!:\"$searchLang\"" else "", lazyHeaders)
+    override fun popularMangaRequest(page: Int) = GET("$apiBooksUrl?sort=8&page=$page" + if (searchLang.isNotBlank()) "&s=language:\"^$searchLang$\"" else "", lazyHeaders)
     override fun popularMangaParse(response: Response): MangasPage {
         val data = response.parseAs<Books>()
         return MangasPage(data.entries.map(::getManga), data.page * data.limit < data.total)
@@ -179,51 +180,56 @@ class Koharu(
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val url = apiBooksUrl.toHttpUrl().newBuilder().apply {
             val terms: MutableList<String> = mutableListOf()
+            val includedTags: MutableList<Int> = mutableListOf()
+            val excludedTags: MutableList<Int> = mutableListOf()
 
-            if (lang != "all") terms += "language!:\"$searchLang\""
+            if (lang != "all") terms += "language:\"^$searchLang$\""
+
             filters.forEach { filter ->
                 when (filter) {
-                    is SortFilter -> addQueryParameter("sort", filter.getValue())
+                    is KoharuFilters.SortFilter -> addQueryParameter("sort", filter.getValue())
 
-                    is CategoryFilter -> {
+                    is KoharuFilters.CategoryFilter -> {
                         val activeFilter = filter.state.filter { it.state }
                         if (activeFilter.isNotEmpty()) {
                             addQueryParameter("cat", activeFilter.sumOf { it.value }.toString())
                         }
                     }
 
-                    is GenreFilter -> {
-                        val included = filter.state
+                    is KoharuFilters.TagFilter -> {
+                        includedTags += filter.state
                             .filter { it.isIncluded() }
-                            .joinToString(",") { it.id.toString() }
-                        val excluded = filter.state
+                            .map { it.id }
+                        excludedTags += filter.state
                             .filter { it.isExcluded() }
-                            .joinToString(",") { it.id.toString() }
-                        if (included.isNotEmpty()) {
-                            addQueryParameter("include", included)
-                        }
-                        if (excluded.isNotEmpty()) {
-                            addQueryParameter("exclude", excluded)
-                        }
+                            .map { it.id }
                     }
 
-                    is GenreConditionFilter -> {
+                    is KoharuFilters.GenreConditionFilter -> {
                         if (filter.state > 0) {
                             addQueryParameter(filter.param, filter.toUriPart())
                         }
                     }
 
-                    is TextFilter -> {
+                    is KoharuFilters.TextFilter -> {
                         if (filter.state.isNotEmpty()) {
                             val tags = filter.state.split(",").filter(String::isNotBlank).joinToString(",")
                             if (tags.isNotBlank()) {
-                                terms += "${filter.type}!:" + if (filter.type == "pages") tags else '"' + tags + '"'
+                                terms += "${filter.type}:" + if (filter.type == "pages") tags else "\"^$tags$\""
                             }
                         }
                     }
                     else -> {}
                 }
             }
+
+            if (includedTags.isNotEmpty()) {
+                addQueryParameter("include", includedTags.joinToString(","))
+            }
+            if (excludedTags.isNotEmpty()) {
+                addQueryParameter("exclude", excludedTags.joinToString(","))
+            }
+
             if (query.isNotEmpty()) terms.add("title:\"$query\"")
             if (terms.isNotEmpty()) addQueryParameter("s", terms.joinToString(" "))
             addQueryParameter("page", page.toString())
@@ -263,10 +269,11 @@ class Koharu(
         val females = mutableListOf<String>()
         val males = mutableListOf<String>()
         val mixed = mutableListOf<String>()
+        val language = mutableListOf<String>()
         val other = mutableListOf<String>()
         val uploaders = mutableListOf<String>()
         val tags = mutableListOf<String>()
-        for (tag in this@toSManga.tags) {
+        this@toSManga.tags.forEach { tag ->
             when (tag.namespace) {
                 1 -> artists.add(tag.name)
                 2 -> circles.add(tag.name)
@@ -278,6 +285,7 @@ class Koharu(
                 8 -> males.add(tag.name + " ♂")
                 9 -> females.add(tag.name + " ♀")
                 10 -> mixed.add(tag.name)
+                11 -> language.add(tag.name)
                 12 -> other.add(tag.name)
                 else -> tags.add(tag.name)
             }
@@ -292,7 +300,7 @@ class Koharu(
 
         author = (circles.emptyToNull() ?: artists).joinToString { it.capitalizeEach() }
         artist = artists.joinToString { it.capitalizeEach() }
-        genre = (tags + males + females + mixed + other).joinToString { it.capitalizeEach() }
+        genre = (artists + circles + parodies + magazines + characters + cosplayers + tags + females + males + mixed + other).joinToString { it.capitalizeEach() }
         description = buildString {
             circles.joinAndCapitalizeEach()?.let {
                 append("Circles: ", it, "\n")
