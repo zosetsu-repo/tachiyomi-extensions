@@ -15,7 +15,6 @@ import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.source.online.HttpSource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -171,7 +170,9 @@ class Koharu(
             query.startsWith(PREFIX_ID_KEY_SEARCH) -> {
                 val ipk = query.removePrefix(PREFIX_ID_KEY_SEARCH)
                 val response = client.newCall(GET("$apiBooksUrl/detail/$ipk", lazyHeaders)).execute()
-                Observable.just(mangaDetailPage(response))
+                Observable.just(
+                    MangasPage(listOf(mangaDetailsParse(response)), false),
+                )
             }
             else -> super.fetchSearchManga(page, query, filters)
         }
@@ -240,14 +241,6 @@ class Koharu(
 
     override fun searchMangaParse(response: Response) = popularMangaParse(response)
 
-    private fun mangaDetailPage(response: Response): MangasPage {
-        val mangaDetail = response.parseAs<MangaDetail>()
-
-        return MangasPage(
-            listOf(mangaDetail.toSManga()),
-            false,
-        )
-    }
     // Details
 
     override fun mangaDetailsRequest(manga: SManga): Request {
@@ -255,103 +248,11 @@ class Koharu(
     }
 
     override fun mangaDetailsParse(response: Response): SManga {
-        return response.parseAs<MangaDetail>().toSManga()
-    }
-
-    private val dateReformat = SimpleDateFormat("EEEE, d MMM yyyy HH:mm (z)", Locale.ENGLISH)
-    private fun MangaDetail.toSManga() = SManga.create().apply {
-        val artists = mutableListOf<String>()
-        val circles = mutableListOf<String>()
-        val parodies = mutableListOf<String>()
-        val magazines = mutableListOf<String>()
-        val characters = mutableListOf<String>()
-        val cosplayers = mutableListOf<String>()
-        val females = mutableListOf<String>()
-        val males = mutableListOf<String>()
-        val mixed = mutableListOf<String>()
-        val language = mutableListOf<String>()
-        val other = mutableListOf<String>()
-        val uploaders = mutableListOf<String>()
-        val tags = mutableListOf<String>()
-        this@toSManga.tags.forEach { tag ->
-            when (tag.namespace) {
-                1 -> artists.add(tag.name)
-                2 -> circles.add(tag.name)
-                3 -> parodies.add(tag.name)
-                4 -> magazines.add(tag.name)
-                5 -> characters.add(tag.name)
-                6 -> cosplayers.add(tag.name)
-                7 -> tag.name.takeIf { it != "anonymous" }?.let { uploaders.add(it) }
-                8 -> males.add(tag.name + " ♂")
-                9 -> females.add(tag.name + " ♀")
-                10 -> mixed.add(tag.name)
-                11 -> language.add(tag.name)
-                12 -> other.add(tag.name)
-                else -> tags.add(tag.name)
-            }
+        val mangaDetail = response.parseAs<MangaDetail>()
+        return mangaDetail.toSManga().apply {
+            setUrlWithoutDomain("${mangaDetail.id}/${mangaDetail.key}")
+            title = if (remadd()) mangaDetail.title.shortenTitle() else mangaDetail.title
         }
-
-        var appended = false
-        fun List<String>.joinAndCapitalizeEach(): String? = this.emptyToNull()?.joinToString { it.capitalizeEach() }?.apply { appended = true }
-
-        setUrlWithoutDomain("$id/$key")
-        thumbnail_url = thumbnails.base + thumbnails.main.path
-        title = if (remadd()) this@toSManga.title.shortenTitle() else this@toSManga.title
-
-        author = (circles.emptyToNull() ?: artists).joinToString { it.capitalizeEach() }
-        artist = artists.joinToString { it.capitalizeEach() }
-        genre = (artists + circles + parodies + magazines + characters + cosplayers + tags + females + males + mixed + other).joinToString { it.capitalizeEach() }
-        description = buildString {
-            circles.joinAndCapitalizeEach()?.let {
-                append("Circles: ", it, "\n")
-            }
-            uploaders.joinAndCapitalizeEach()?.let {
-                append("Uploaders: ", it, "\n")
-            }
-            magazines.joinAndCapitalizeEach()?.let {
-                append("Magazines: ", it, "\n")
-            }
-            cosplayers.joinAndCapitalizeEach()?.let {
-                append("Cosplayers: ", it, "\n")
-            }
-            parodies.joinAndCapitalizeEach()?.let {
-                append("Parodies: ", it, "\n")
-            }
-            characters.joinAndCapitalizeEach()?.let {
-                append("Characters: ", it, "\n")
-            }
-
-            if (appended) append("\n")
-
-            try {
-                append("Posted: ", dateReformat.format(created_at), "\n")
-            } catch (_: Exception) {}
-
-            /*
-            val dataKey = when (quality()) {
-                "1600" -> data.`1600` ?: data.`1280` ?: data.`0`
-                "1280" -> data.`1280` ?: data.`1600` ?: data.`0`
-                "980" -> data.`980` ?: data.`1280` ?: data.`0`
-                "780" -> data.`780` ?: data.`980` ?: data.`0`
-                else -> data.`0`
-            }
-            append("Size: ", dataKey.readableSize(), "\n\n")
-             */
-            append("Pages: ", thumbnails.entries.size, "\n\n")
-        }
-        status = SManga.COMPLETED
-        update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
-        initialized = true
-    }
-
-    private fun String.capitalizeEach() = this.split(" ").joinToString(" ") { s ->
-        s.replaceFirstChar { sr ->
-            if (sr.isLowerCase()) sr.titlecase(Locale.getDefault()) else sr.toString()
-        }
-    }
-
-    private fun <T> Collection<T>.emptyToNull(): Collection<T>? {
-        return this.ifEmpty { null }
     }
 
     override fun getMangaUrl(manga: SManga) = "$baseUrl/g/${manga.url}"
@@ -457,5 +358,7 @@ class Koharu(
 
         internal var token: String? = null
         internal var authorization: String? = null
+
+        internal val dateReformat = SimpleDateFormat("EEEE, d MMM yyyy HH:mm (z)", Locale.ENGLISH)
     }
 }
