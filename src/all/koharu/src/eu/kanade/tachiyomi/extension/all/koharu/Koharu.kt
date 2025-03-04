@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.all.koharu
 
 import android.app.Application
 import android.content.SharedPreferences
+import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
@@ -63,6 +64,8 @@ class Koharu(
     private fun quality() = preferences.getString(PREF_IMAGERES, "1280")!!
 
     private fun remadd() = preferences.getBoolean(PREF_REM_ADD, false)
+
+    private fun alwaysExcludeTags() = preferences.getString(PREF_EXCLUDE_TAGS, "")
 
     private var _domainUrl: String? = null
     internal val domainUrl: String
@@ -185,6 +188,11 @@ class Koharu(
             val excludedTags: MutableList<Int> = mutableListOf()
 
             if (lang != "all") terms += "language:\"^$searchLang$\""
+            val alwaysExcludeTags = alwaysExcludeTags()?.split(",")
+                ?.map { it.trim() }?.filter(String::isNotBlank) ?: emptyList()
+            if (alwaysExcludeTags.isNotEmpty()) {
+                terms += "tag:\"${alwaysExcludeTags.joinToString(",") { "-$it" }}\""
+            }
 
             filters.forEach { filter ->
                 when (filter) {
@@ -216,7 +224,7 @@ class Koharu(
                         if (filter.state.isNotEmpty()) {
                             val tags = filter.state.split(",").filter(String::isNotBlank).joinToString(",")
                             if (tags.isNotBlank()) {
-                                terms += "${filter.type}:" + if (filter.type == "pages") tags else "\"^$tags$\""
+                                terms += "${filter.type}:" + if (filter.type == "pages") tags else "\"$tags\""
                             }
                         }
                     }
@@ -345,6 +353,13 @@ class Koharu(
                 "Reload manga to apply changes to loaded manga."
             setDefaultValue(false)
         }.also(screen::addPreference)
+
+        EditTextPreference(screen.context).apply {
+            key = PREF_EXCLUDE_TAGS
+            title = "Tags to exclude from browse/search"
+            summary = "Separate tags with commas (,).\n" +
+                "Excluding: ${alwaysExcludeTags()}"
+        }.also(screen::addPreference)
     }
 
     private inline fun <reified T> Response.parseAs(): T {
@@ -355,6 +370,7 @@ class Koharu(
         const val PREFIX_ID_KEY_SEARCH = "id:"
         private const val PREF_IMAGERES = "pref_image_quality"
         private const val PREF_REM_ADD = "pref_remove_additional"
+        private const val PREF_EXCLUDE_TAGS = "pref_exclude_tags"
 
         internal var token: String? = null
         internal var authorization: String? = null
