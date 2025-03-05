@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -55,7 +54,6 @@ class TurnstileInterceptor(
         val request = chain.request()
 
         val url = request.url.toString()
-        Log.e("Koharu", "Requesting URL: $url")
         val matchResult = authorizedRequestRegex.find(url) ?: return chain.proceed(request)
         if (matchResult.groupValues.size == 3) {
             val requestingUrl = matchResult.groupValues[1]
@@ -65,7 +63,6 @@ class TurnstileInterceptor(
             if (crt.isNotBlank() && crt != "null") {
                 // Token already set in URL, just make the request
                 newResponse = chain.proceed(request)
-                Log.e("Koharu", "Response code: ${newResponse.code}")
                 if (newResponse.code !in listOf(400, 403)) return newResponse
             } else {
                 // Token doesn't include, add token then make request
@@ -75,9 +72,7 @@ class TurnstileInterceptor(
                 } else {
                     GET("${requestingUrl}$token", lazyHeaders)
                 }
-                Log.e("Koharu", "New request: ${newRequest.url}")
                 newResponse = chain.proceed(newRequest)
-                Log.e("Koharu", "Response code: ${newResponse.code}")
                 if (newResponse.code !in listOf(400, 403)) return newResponse
             }
             newResponse.close()
@@ -91,9 +86,7 @@ class TurnstileInterceptor(
             } else {
                 GET("${requestingUrl}$token", lazyHeaders)
             }
-            Log.e("Koharu", "New re-request: ${newRequest.url}")
             newResponse = chain.proceed(newRequest)
-            Log.e("Koharu", "Response code: ${newResponse.code}")
             if (newResponse.code !in listOf(400, 403)) return newResponse
             throw IOException("Open webview once to refresh token (${newResponse.code})")
         }
@@ -102,7 +95,6 @@ class TurnstileInterceptor(
 
     @SuppressLint("SetJavaScriptEnabled")
     fun resolveInWebview(): Pair<String?, String?> {
-        Log.e("TurnstileInterceptor", "resolveInWebview")
         val latch = CountDownLatch(1)
         var webView: WebView? = null
 
@@ -125,8 +117,6 @@ class TurnstileInterceptor(
                         if (request.method == "POST") {
                             // Authorize & requesting a new token.
                             // `authorization` here should be in format: Bearer <authorization>
-                            Log.e("TurnstileInterceptor", "Authorization: $authorization")
-
                             try {
                                 val noRedirectClient = client.newBuilder().followRedirects(false).build()
                                 val authHeaders = authHeaders(authHeader)
@@ -136,12 +126,10 @@ class TurnstileInterceptor(
                                         with(response) {
                                             token = body.string()
                                                 .removeSurrounding("\"")
-                                            Log.e("TurnstileInterceptor", "Requested token: $token")
                                         }
                                     }
                                 }
-                            } catch (e: IOException) {
-                                Log.e("TurnstileInterceptor", "Request failed: ${e.message}")
+                            } catch (_: IOException) {
                             } finally {
                                 latch.countDown()
                             }
@@ -152,12 +140,10 @@ class TurnstileInterceptor(
                             // But we will check it ourselves.
                             // Normally this might not occur because old token should already be acquired & rechecked via onPageFinished.
                             // `authorization` here should be in format: Bearer <token>
-                            Log.e("TurnstileInterceptor", "Authorization1: $authorization")
                             val oldToken = authorization
                                 ?.substringAfterLast(" ")
                             if (oldToken != null && recheckTokenValid(oldToken)) {
                                 token = oldToken
-                                Log.e("TurnstileInterceptor", "GET: Token still valid")
                                 latch.countDown()
                             }
                         }
@@ -178,14 +164,11 @@ class TurnstileInterceptor(
                         if (!it.isNullOrBlank() && it != "null" && token.isNullOrBlank()) {
                             val oldToken = it
                                 .removeSurrounding("\"")
-                            Log.e("TurnstileInterceptor", "Clearance: $oldToken")
                             if (recheckTokenValid(oldToken)) {
                                 token = oldToken
-                                Log.e("TurnstileInterceptor", "Read: Token still valid")
                                 latch.countDown()
                             }
                         }
-                        Log.e("TurnstileInterceptor", "Page finished")
                     }
                 }
 
@@ -199,8 +182,7 @@ class TurnstileInterceptor(
                                 return true
                             }
                         }
-                    } catch (e: IOException) {
-                        Log.e("TurnstileInterceptor", "Request failed: ${e.message}")
+                    } catch (_: IOException) {
                     }
                     return false
                 }
@@ -220,7 +202,6 @@ class TurnstileInterceptor(
                         token = it
                             .removeSurrounding("\"")
                     }
-                    Log.e("TurnstileInterceptor", "Clearance: $it / $token - Authorization: $authorization")
                 }
             }
 
