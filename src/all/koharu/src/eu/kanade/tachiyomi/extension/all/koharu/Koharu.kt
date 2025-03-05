@@ -166,12 +166,25 @@ class Koharu(
 
     // Latest
 
-    override fun latestUpdatesRequest(page: Int) = GET("$apiBooksUrl?page=$page" + if (searchLang.isNotBlank()) "&s=language:\"^$searchLang$\"" else "", lazyHeaders)
+    override fun latestUpdatesRequest(page: Int) = GET(
+        apiBooksUrl.toHttpUrl().newBuilder().apply {
+            addQueryParameter("page", page.toString())
+            if (searchLang.isNotBlank()) addQueryParameter("s", "language:\"^$searchLang\$\"")
+        }.build(),
+        lazyHeaders,
+    )
     override fun latestUpdatesParse(response: Response) = popularMangaParse(response)
 
     // Popular
 
-    override fun popularMangaRequest(page: Int) = GET("$apiBooksUrl?sort=8&page=$page" + if (searchLang.isNotBlank()) "&s=language:\"^$searchLang$\"" else "", lazyHeaders)
+    override fun popularMangaRequest(page: Int) = GET(
+        apiBooksUrl.toHttpUrl().newBuilder().apply {
+            addQueryParameter("sort", "8")
+            addQueryParameter("page", page.toString())
+            if (searchLang.isNotBlank()) addQueryParameter("s", "language:\"^$searchLang\$\"")
+        }.build(),
+        lazyHeaders,
+    )
     override fun popularMangaParse(response: Response): MangasPage {
         val data = response.parseAs<Books>()
         return MangasPage(data.entries.map(::getManga), data.page * data.limit < data.total)
