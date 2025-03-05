@@ -169,10 +169,19 @@ class Koharu(
     override fun latestUpdatesRequest(page: Int) = GET(
         apiBooksUrl.toHttpUrl().newBuilder().apply {
             addQueryParameter("page", page.toString())
-            if (searchLang.isNotBlank()) addQueryParameter("s", "language:\"^$searchLang\$\"")
+
+            val terms: MutableList<String> = mutableListOf()
+            if (lang != "all") terms += "language:\"^$searchLang$\""
+            val alwaysExcludeTags = alwaysExcludeTags()?.split(",")
+                ?.map { it.trim() }?.filter(String::isNotBlank) ?: emptyList()
+            if (alwaysExcludeTags.isNotEmpty()) {
+                terms += "tag:\"${alwaysExcludeTags.joinToString(",") { "-$it" }}\""
+            }
+            if (terms.isNotEmpty()) addQueryParameter("s", terms.joinToString(" "))
         }.build(),
         lazyHeaders,
     )
+
     override fun latestUpdatesParse(response: Response) = popularMangaParse(response)
 
     // Popular
@@ -181,10 +190,19 @@ class Koharu(
         apiBooksUrl.toHttpUrl().newBuilder().apply {
             addQueryParameter("sort", "8")
             addQueryParameter("page", page.toString())
-            if (searchLang.isNotBlank()) addQueryParameter("s", "language:\"^$searchLang\$\"")
+
+            val terms: MutableList<String> = mutableListOf()
+            if (lang != "all") terms += "language:\"^$searchLang$\""
+            val alwaysExcludeTags = alwaysExcludeTags()?.split(",")
+                ?.map { it.trim() }?.filter(String::isNotBlank) ?: emptyList()
+            if (alwaysExcludeTags.isNotEmpty()) {
+                terms += "tag:\"${alwaysExcludeTags.joinToString(",") { "-$it" }}\""
+            }
+            if (terms.isNotEmpty()) addQueryParameter("s", terms.joinToString(" "))
         }.build(),
         lazyHeaders,
     )
+
     override fun popularMangaParse(response: Response): MangasPage {
         val data = response.parseAs<Books>()
         return MangasPage(data.entries.map(::getManga), data.page * data.limit < data.total)
