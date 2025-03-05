@@ -6,7 +6,17 @@ import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.artistList
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.circleList
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.femaleList
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.genreList
 import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.getFilters
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.maleList
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.mixedList
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.otherList
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.parodyList
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.tagsFetchAttempts
+import eu.kanade.tachiyomi.extension.all.koharu.KoharuFilters.tagsFetched
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.interceptor.rateLimit
@@ -17,8 +27,11 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -166,8 +179,6 @@ class Koharu(
 
     // Search
 
-    override fun getFilterList(): FilterList = getFilters()
-
     override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> {
         return when {
             query.startsWith(PREFIX_ID_KEY_SEARCH) -> {
@@ -248,6 +259,48 @@ class Koharu(
     }
 
     override fun searchMangaParse(response: Response) = popularMangaParse(response)
+
+    override fun getFilterList(): FilterList {
+        launchIO { fetchTags() }
+
+        return getFilters()
+    }
+
+    private val scope = CoroutineScope(Dispatchers.IO)
+
+    private fun launchIO(block: () -> Unit) = scope.launch { block() }
+
+    /**
+     * Fetch the genres from the source to be used in the filters.
+     */
+    private fun fetchTags() {
+        if (tagsFetchAttempts < 3 && !tagsFetched) {
+            try {
+                client.newCall(
+                    GET("$apiBooksUrl/tags/filters", lazyHeaders),
+                ).execute()
+                    .use { it.parseAs<List<Filter>>() }
+                    .also {
+                        tagsFetched = true
+                    }
+                    .takeIf { it.isNotEmpty() }
+                    ?.map { it.toTag() }
+                    ?.also { tags ->
+                        genreList = tags.filterIsInstance<KoharuFilters.Genre>()
+                        femaleList = tags.filterIsInstance<KoharuFilters.Female>()
+                        maleList = tags.filterIsInstance<KoharuFilters.Male>()
+                        artistList = tags.filterIsInstance<KoharuFilters.Artist>()
+                        circleList = tags.filterIsInstance<KoharuFilters.Circle>()
+                        parodyList = tags.filterIsInstance<KoharuFilters.Parody>()
+                        mixedList = tags.filterIsInstance<KoharuFilters.Mixed>()
+                        otherList = tags.filterIsInstance<KoharuFilters.Other>()
+                    }
+            } catch (_: Exception) {
+            } finally {
+                tagsFetchAttempts++
+            }
+        }
+    }
 
     // Details
 

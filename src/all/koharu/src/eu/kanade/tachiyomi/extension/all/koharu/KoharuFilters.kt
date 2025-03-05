@@ -4,12 +4,31 @@ import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 
 object KoharuFilters {
+    var genreList: List<Genre> = KoharuTags.genreList
+    var femaleList: List<Female> = KoharuTags.femaleList
+    var maleList: List<Male> = KoharuTags.maleList
+    var artistList: List<Artist> = KoharuTags.artistList
+    var circleList: List<Circle> = KoharuTags.circleList
+    var parodyList: List<Parody> = KoharuTags.parodyList
+    var mixedList: List<Mixed> = KoharuTags.mixedList
+    var otherList: List<Other> = KoharuTags.otherList
+
+    /**
+     * Whether tags have been fetched
+     */
+    internal var tagsFetched: Boolean = false
+
+    /**
+     * Inner variable to control how much tries the tags request was called.
+     */
+    internal var tagsFetchAttempts: Int = 0
+
     fun getFilters(): FilterList {
         return FilterList(
             SortFilter("Sort by", getSortsList),
             CategoryFilter("Category"),
             Filter.Separator(),
-            TagFilter("Tags", tagList),
+            TagFilter("Tags", genreList),
             TagFilter("Female Tags", femaleList),
             TagFilter("Male Tags", maleList),
             TagFilter("Artists", artistList),
@@ -17,8 +36,8 @@ object KoharuFilters {
             TagFilter("Parodies", parodyList),
             TagFilter("Mixed", mixedList),
             TagFilter("Other", otherList),
-            GenreConditionFilter("Include condition", genreConditionIncludeFilterOptions, "i"),
-            GenreConditionFilter("Exclude condition", genreConditionExcludeFilterOptions, "e"),
+            GenreConditionFilter("Include condition", tagsConditionIncludeFilterOptions, "i"),
+            GenreConditionFilter("Exclude condition", tagsConditionExcludeFilterOptions, "e"),
             Filter.Separator(),
             Filter.Header("Separate tags with commas (,)"),
             Filter.Header("Prepend with dash (-) to exclude"),
@@ -71,7 +90,8 @@ object KoharuFilters {
         options.toTypedArray(),
     )
 
-    open class Tag(val id: Int, val name: String, val namespace: Int = 0)
+    open class Tag(val id: Int, val name: String, val namespace: Int)
+    class Genre(id: Int, name: String) : Tag(id, name, namespace = 0)
     class Artist(id: Int, name: String) : Tag(id, name, namespace = 1)
     class Circle(id: Int, name: String) : Tag(id, name, namespace = 2)
     class Parody(id: Int, name: String) : Tag(id, name, namespace = 3)
@@ -95,13 +115,13 @@ object KoharuFilters {
     }
 
     // https://api.schale.network/books?include=<id>,<id>&i=1&exclude=<id>,<id>&e=1
-    private val genreConditionIncludeFilterOptions: List<Pair<String, String>> =
+    private val tagsConditionIncludeFilterOptions: List<Pair<String, String>> =
         listOf(
             "AND" to "",
             "OR" to "1",
         )
 
-    private val genreConditionExcludeFilterOptions: List<Pair<String, String>> =
+    private val tagsConditionExcludeFilterOptions: List<Pair<String, String>> =
         listOf(
             "OR" to "",
             "AND" to "1",

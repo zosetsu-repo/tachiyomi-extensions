@@ -8,9 +8,28 @@ import java.util.Locale
 
 @Serializable
 class Tag(
-    var name: String,
-    var namespace: Int = 0,
+    val name: String,
+    val namespace: Int = 0,
 )
+
+@Serializable
+class Filter(
+    private val id: Int,
+    private val name: String,
+    private val namespace: Int = 0,
+) {
+    fun toTag() = when (namespace) {
+        0 -> KoharuFilters.Genre(id, name)
+        1 -> KoharuFilters.Artist(id, name)
+        2 -> KoharuFilters.Circle(id, name)
+        3 -> KoharuFilters.Parody(id, name)
+        8 -> KoharuFilters.Male(id, name)
+        9 -> KoharuFilters.Female(id, name)
+        10 -> KoharuFilters.Mixed(id, name)
+        12 -> KoharuFilters.Other(id, name)
+        else -> KoharuFilters.Tag(id, name, namespace)
+    }
+}
 
 @Serializable
 class Books(
@@ -103,6 +122,8 @@ class MangaDetail(
             try {
                 append("Posted: ", dateReformat.format(created_at), "\n")
             } catch (_: Exception) {}
+
+            append("Pages: ", thumbnails.entries.size, "\n\n")
         }
         status = SManga.COMPLETED
         update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
