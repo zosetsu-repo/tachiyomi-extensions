@@ -52,7 +52,7 @@ class TurnstileInterceptor(
     private val authorizedRequestRegex by lazy { Regex("""(.+\?crt=)(.*)""") }
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        if (token == null) {
+        if (token.isNullOrBlank()) {
             resolveInWebview()
         }
         val request = chain.request()
@@ -87,6 +87,7 @@ class TurnstileInterceptor(
 
             // Request failed, refresh token then try again
             clearToken()
+            token = null
             resolveInWebview()
             val newRequest = if (request.method == "POST") {
                 POST("${requestingUrl}$token", lazyHeaders)
@@ -107,7 +108,6 @@ class TurnstileInterceptor(
         Log.e("TurnstileInterceptor", "resolveInWebview")
         val latch = CountDownLatch(1)
         var webView: WebView? = null
-        var tokenRequested = false
 
         handler.post {
             val webview = WebView(context)
@@ -126,8 +126,9 @@ class TurnstileInterceptor(
                     if (request?.url.toString().contains(authUrl) && authHeader != null) {
                         authorization = authHeader
                         if (request.method == "POST") {
+                            // Authorize & requesting a new token.
+                            // `authorization` here should be in format: Bearer <authorization>
                             Log.e("TurnstileInterceptor", "Authorization: $authorization")
-                            tokenRequested = true
 
                             try {
                                 val noRedirectClient = client.newBuilder().followRedirects(false).build()
@@ -142,43 +143,71 @@ class TurnstileInterceptor(
                                         }
                                         latch.countDown()
                                     } else {
-                                        println("Request failed with code: ${response.code}")
+                                        Log.e("TurnstileInterceptor", "Request failed with code: ${response.code}")
                                     }
                                 }
                             } catch (e: IOException) {
-                                println("Request failed: ${e.message}")
+                                Log.e("TurnstileInterceptor", "Request failed: ${e.message}")
                                 latch.countDown()
-                                return super.shouldInterceptRequest(view, request)
                             }
                         }
                         if (request.method == "GET") {
-                            // TODO: What to do if it return failed? => should not countdown, let the POST method request again
-                            // Can try mitigate a wrong clearance
-                            // Token might be rechecked here but just let it fails then we will reset and request a new one
-                            // Normally this might not occur because old token should already be returned via onPageFinished
-                            Log.e("TurnstileInterceptor", "Authorization: $authorization")
-                            token = authorization?.substringAfterLast(" ")
-                            tokenRequested = true
-                            latch.countDown()
+                            // Site is trying to recheck old token validation here.
+                            // If it fails then site will request a new one using POST method.
+                            // But we will check it ourselves.
+                            // Normally this might not occur because old token should already be acquired & rechecked via onPageFinished.
+                            // `authorization` here should be in format: Bearer <token>
+                            Log.e("TurnstileInterceptor", "Authorization1: $authorization")
+                            val oldToken = authorization
+                                ?.substringAfterLast(" ")
+                            if (oldToken != null && recheckTokenValid(oldToken)) {
+                                token = oldToken
+                                Log.e("TurnstileInterceptor", "GET: Token still valid")
+                                latch.countDown()
+                            }
                         }
                     }
                     return super.shouldInterceptRequest(view, request)
                 }
 
+                /**
+                 * Read the saved token in localStorage and use it.
+                 * This token might already expired. Normally site will check token for expiration with a GET request.
+                 * Here will will recheck it ourselves.
+                 */
                 override fun onPageFinished(view: WebView?, url: String?) {
                     if (view == null) return
-                    // Read the saved token in localStorage
-                    // Fixme: this might overwrite the one newly requested
                     val script = "javascript:localStorage['clearance']"
                     view.evaluateJavascript(script) {
-                        if (!it.isNullOrBlank() && it != "null") {
-                            token = it
+                        // Avoid overwrite newly requested token
+                        if (!it.isNullOrBlank() && it != "null" && token.isNullOrBlank()) {
+                            val oldToken = it
                                 .removeSurrounding("\"")
-                            Log.e("TurnstileInterceptor", "Clearance: $token")
-                            latch.countDown()
+                            Log.e("TurnstileInterceptor", "Clearance: $oldToken")
+                            if (recheckTokenValid(oldToken)) {
+                                token = oldToken
+                                Log.e("TurnstileInterceptor", "Read: Token still valid")
+                                latch.countDown()
+                            }
                         }
                         Log.e("TurnstileInterceptor", "Page finished")
                     }
+                }
+
+                private fun recheckTokenValid(token: String): Boolean {
+                    try {
+                        val noRedirectClient = client.newBuilder().followRedirects(false).build()
+                        val authHeaders = authHeaders("Bearer $token")
+                        val response = noRedirectClient.newCall(GET(authUrl, authHeaders)).execute()
+                        response.use {
+                            if (response.isSuccessful) {
+                                return true
+                            }
+                        }
+                    } catch (e: IOException) {
+                        Log.e("TurnstileInterceptor", "Request failed: ${e.message}")
+                    }
+                    return false
                 }
             }
 
@@ -188,6 +217,7 @@ class TurnstileInterceptor(
         latch.await(20, TimeUnit.SECONDS)
 
         handler.post {
+            // One last try to read the token from localStorage, in case it got updated last minute.
             if (token.isNullOrBlank()) {
                 val script = "javascript:localStorage['clearance']"
                 webView?.evaluateJavascript(script) {
