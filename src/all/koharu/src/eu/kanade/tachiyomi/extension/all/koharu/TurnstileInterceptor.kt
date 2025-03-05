@@ -52,9 +52,6 @@ class TurnstileInterceptor(
     private val authorizedRequestRegex by lazy { Regex("""(.+\?crt=)(.*)""") }
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        if (token.isNullOrBlank()) {
-            resolveInWebview()
-        }
         val request = chain.request()
 
         val url = request.url.toString()
@@ -98,7 +95,7 @@ class TurnstileInterceptor(
             newResponse = chain.proceed(newRequest)
             Log.e("Koharu", "Response code: ${newResponse.code}")
             if (newResponse.code !in listOf(400, 403)) return newResponse
-            throw IOException("Solve Captcha in WebView (${newResponse.code})")
+            throw IOException("Open webview once to refresh token (${newResponse.code})")
         }
         return chain.proceed(request)
     }
@@ -141,13 +138,11 @@ class TurnstileInterceptor(
                                                 .removeSurrounding("\"")
                                             Log.e("TurnstileInterceptor", "Requested token: $token")
                                         }
-                                        latch.countDown()
-                                    } else {
-                                        Log.e("TurnstileInterceptor", "Request failed with code: ${response.code}")
                                     }
                                 }
                             } catch (e: IOException) {
                                 Log.e("TurnstileInterceptor", "Request failed: ${e.message}")
+                            } finally {
                                 latch.countDown()
                             }
                         }
