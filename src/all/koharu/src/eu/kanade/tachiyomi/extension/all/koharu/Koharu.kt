@@ -110,13 +110,13 @@ class Koharu(
     }
 
     override val client: OkHttpClient = network.cloudflareClient.newBuilder()
-        .rateLimit(5)
+        .rateLimit(3)
         .build()
 
     private val interceptedClient: OkHttpClient
         get() = network.cloudflareClient.newBuilder()
             .addInterceptor(TurnstileInterceptor(client, domainUrl, authUrl, lazyHeaders["User-Agent"]))
-            .rateLimit(5)
+            .rateLimit(3)
             .build()
 
     private fun getManga(book: Entry) = SManga.create().apply {
