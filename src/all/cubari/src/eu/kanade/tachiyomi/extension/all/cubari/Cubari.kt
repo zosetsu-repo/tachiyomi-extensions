@@ -392,7 +392,7 @@ open class Cubari(override val lang: String) : HttpSource() {
             author = jsonObj["author"]?.jsonPrimitive?.content ?: AUTHOR_FALLBACK
 
             val descriptionFull = jsonObj["description"]?.jsonPrimitive?.content
-            description = descriptionFull?.substringBefore("Tags: ") ?: DESCRIPTION_FALLBACK
+            description = descriptionFull?.substringBefore("Status: ")?.trim() ?: DESCRIPTION_FALLBACK
             genre = descriptionFull?.let {
                 if (it.contains("Tags: ")) {
                     it.substringAfter("Tags: ")
@@ -400,6 +400,15 @@ open class Cubari(override val lang: String) : HttpSource() {
                     ""
                 }
             } ?: ""
+            status = when {
+                descriptionFull?.contains("Status: Completed", ignoreCase = true) == true -> SManga.COMPLETED
+                descriptionFull?.contains("Status: Ongoing", ignoreCase = true) == true -> SManga.ONGOING
+                descriptionFull?.contains("Status: Licensed", ignoreCase = true) == true -> SManga.LICENSED
+                descriptionFull?.contains("Status: Publishing Finished", ignoreCase = true) == true -> SManga.PUBLISHING_FINISHED
+                descriptionFull?.contains("Status: Cancelled", ignoreCase = true) == true -> SManga.CANCELLED
+                descriptionFull?.contains("Status: On Hiatus", ignoreCase = true) == true -> SManga.ON_HIATUS
+                else -> SManga.UNKNOWN
+            }
 
             url = mangaReference?.url ?: jsonObj["url"]!!.jsonPrimitive.content
             thumbnail_url = jsonObj["coverUrl"]?.jsonPrimitive?.content

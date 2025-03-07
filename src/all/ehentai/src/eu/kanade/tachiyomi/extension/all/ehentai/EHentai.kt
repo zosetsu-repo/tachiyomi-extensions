@@ -7,6 +7,7 @@ import android.net.Uri
 import android.webkit.CookieManager
 import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
+import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.asObservableSuccess
@@ -62,6 +63,13 @@ abstract class EHentai(
 
     private var lastMangaId = ""
 
+    private var displayFullTitle: Boolean = when (preferences.getString("${TITLE_PREF}_$lang", "full")) {
+        "full" -> true
+        else -> false
+    }
+    private val shortenTitleRegex = Regex("""(\[[^]]*]|[({][^)}]*[)}])""")
+    private fun String.shortenTitle() = this.replace(shortenTitleRegex, "").trim()
+
     // true if lang is a "natural human language"
     private fun isLangNatural(): Boolean = lang !in listOf("none", "other")
 
@@ -85,7 +93,9 @@ abstract class EHentai(
                 SManga.create().apply {
                     // Get title
                     it.selectFirst("a")?.apply {
-                        title = this.select(".glink").text()
+                        title = this.select(".glink").text().let {
+                            if (displayFullTitle) it.trim() else it.shortenTitle()
+                        }
                         url = ExGalleryMetadata.normalizeUrl(attr("href"))
                         if (i == mangaElements.lastIndex) {
                             lastMangaId = ExGalleryMetadata.galleryId(attr("href"))
@@ -111,7 +121,7 @@ abstract class EHentai(
         listOf(
             SChapter.create().apply {
                 url = manga.url
-                name = "Chapter"
+                name = "Chapter 1"
                 chapter_number = 1f
             },
         ),
@@ -252,7 +262,9 @@ abstract class EHentai(
     override fun mangaDetailsParse(response: Response) = with(response.asJsoup()) {
         with(ExGalleryMetadata()) {
             url = response.request.url.encodedPath
-            title = select("#gn").text().nullIfBlank()?.trim()
+            title = select("#gn").text().nullIfBlank()?.trim()?.let {
+                if (displayFullTitle) it else it.shortenTitle()
+            }
 
             altTitle = select("#gj").text().nullIfBlank()?.trim()
 
@@ -313,11 +325,11 @@ abstract class EHentai(
 
             // Parse tags
             tags.clear()
-            select("#taglist tr").forEach {
-                val namespace = it.select(".tc").text().removeSuffix(":")
-                val currentTags = it.select("div").map { element ->
+            select("#taglist tr").forEach { trElement ->
+                val namespace = trElement.select(".tc").text().removeSuffix(":")
+                val currentTags = trElement.select("div[id^=td]").map { element ->
                     Tag(
-                        element.text().trim(),
+                        element.select("a").text().trim(),
                         element.hasClass("gtl"),
                     )
                 }
@@ -561,7 +573,7 @@ abstract class EHentai(
         private const val ENFORCE_LANGUAGE_PREF_KEY = "ENFORCE_LANGUAGE"
         private const val ENFORCE_LANGUAGE_PREF_TITLE = "Enforce Language"
         private const val ENFORCE_LANGUAGE_PREF_SUMMARY = "If checked, forces browsing of manga matching a language tag"
-        private const val ENFORCE_LANGUAGE_PREF_DEFAULT_VALUE = false
+        private const val ENFORCE_LANGUAGE_PREF_DEFAULT_VALUE = true
 
         private const val MEMBER_ID_PREF_KEY = "MEMBER_ID"
         private const val MEMBER_ID_PREF_TITLE = "ipb_member_id"
@@ -582,6 +594,8 @@ abstract class EHentai(
         private const val FORCE_EH_TITLE = "Force e-hentai"
         private const val FORCE_EH_SUMMARY = "Force e-hentai to avoid content on exhentai"
         private const val FORCE_EH_DEFAULT_VALUE = true
+
+        private const val TITLE_PREF = "Display manga title as:"
     }
 
     // Preferences
@@ -625,6 +639,23 @@ abstract class EHentai(
             setDefaultValue(IGNEOUS_PREF_DEFAULT_VALUE)
         }
 
+        val titlePref = ListPreference(screen.context).apply {
+            key = "${TITLE_PREF}_$lang"
+            title = TITLE_PREF
+            entries = arrayOf("Full Title", "Short Title")
+            entryValues = arrayOf("full", "short")
+            summary = "%s"
+            setDefaultValue("short")
+            setOnPreferenceChangeListener { _, newValue ->
+                displayFullTitle = when (newValue) {
+                    "full" -> true
+                    else -> false
+                }
+                true
+            }
+        }
+
+        screen.addPreference(titlePref)
         screen.addPreference(forceEhPref)
         screen.addPreference(memberIdPref)
         screen.addPreference(passHashPref)

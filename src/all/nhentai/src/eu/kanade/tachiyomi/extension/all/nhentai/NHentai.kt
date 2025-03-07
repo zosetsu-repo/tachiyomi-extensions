@@ -85,7 +85,7 @@ open class NHentai(
             entries = arrayOf("Full Title", "Short Title")
             entryValues = arrayOf("full", "short")
             summary = "%s"
-            setDefaultValue("full")
+            setDefaultValue("short")
 
             setOnPreferenceChangeListener { _, newValue ->
                 displayFullTitle = when (newValue) {
@@ -247,7 +247,7 @@ open class NHentai(
         val data = json.parseAs<Hentai>()
         return listOf(
             SChapter.create().apply {
-                name = "Chapter"
+                name = "Chapter 1"
                 scanlator = getGroups(data)
                 date_upload = data.upload_date * 1000
                 setUrlWithoutDomain(response.request.url.encodedPath)

@@ -33,6 +33,10 @@ fun ExGalleryMetadata.copyTo(manga: SManga) {
     // Set genre
     genre?.let { manga.genre = it }
 
+    // Assign tags to genre property
+    val tagString = tags.values.flatten().joinToString { it.name }
+    manga.genre = if (manga.genre.isNullOrBlank()) tagString else "${manga.genre}, $tagString"
+
     // Try to automatically identify if it is ongoing, we try not to be too lenient here to avoid making mistakes
     // We default to completed
     manga.status = SManga.COMPLETED
@@ -70,7 +74,7 @@ fun ExGalleryMetadata.copyTo(manga: SManga) {
 
     val tagsDesc = buildTagsDescription(this)
 
-    manga.description = listOf(titleDesc.toString(), detailsDesc.toString(), tagsDesc.toString())
+    manga.description = listOf(titleDesc.toString(), detailsDesc.toString())
         .filter(String::isNotBlank)
         .joinToString(separator = "\n")
 }

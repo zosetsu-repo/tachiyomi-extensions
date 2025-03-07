@@ -75,6 +75,13 @@ class MangaParkComic(
             }
             "hiatus" -> SManga.ON_HIATUS
             "cancelled" -> SManga.CANCELLED
+            "pending" -> when (uploadStatus) {
+                "ongoing" -> SManga.ONGOING
+                "completed" -> SManga.COMPLETED
+                "hiatus" -> SManga.ON_HIATUS
+                "cancelled" -> SManga.CANCELLED
+                else -> SManga.UNKNOWN
+            }
             else -> SManga.UNKNOWN
         }
         initialized = true

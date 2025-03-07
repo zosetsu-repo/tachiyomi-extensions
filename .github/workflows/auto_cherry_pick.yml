@@ -18,7 +18,7 @@ permissions:
 jobs:
   auto-merge:
     name: Auto cherry-pick Keiyoushi
-    if: github.repository == 'komikku-repo/komikku-extensions'
+    if: github.repository == 'kana-shii/kanashii-extensions'
     runs-on: ubuntu-latest
 
     steps:

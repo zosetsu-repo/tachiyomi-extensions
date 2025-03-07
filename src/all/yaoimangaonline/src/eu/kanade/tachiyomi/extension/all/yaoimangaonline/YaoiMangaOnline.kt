@@ -77,8 +77,10 @@ class YaoiMangaOnline : ParsedHttpSource() {
             thumbnail_url = document
                 .selectFirst(".herald-post-thumbnail img")?.attr("src")
             description = document.select(".entry-content > p:not(:has(img)):not(:contains(You need to login))")
-                .let { elements ->
-                    elements.joinToString("\n\n") { it.wholeText() }
+                .joinToString("\n\n") {
+                    it.html().replace("<br>", "").split("\n").joinToString("\n") { line ->
+                        line.trim()
+                    }
                 }
             genre = document.select(".meta-tags > a").joinToString { it.text() }
             author = document.select(".entry-content > p:contains(Mangaka:)").text()

@@ -1,28 +1,26 @@
-| Build | Up to date | Support Server | Install to app |
-|-------|------------|----------------|----------------|
-| [![Build](https://github.com/komikku-repo/komikku-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/komikku-repo/komikku-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/komikku-repo/komikku-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/komikku-repo/komikku-extensions/actions/workflows/auto_cherry_pick.yml) | [![Discord](https://img.shields.io/discord/1242381704459452488?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/85jB7V5AJR) | [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/komikku-repo/extensions/repo/index.min.json) |
+| Build | Up to date | Install to app |
+|-------|------------|----------------|
+| [![Build](https://github.com/kana-shii/kanashii-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/kana-shii/kanashii-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/kana-shii/kanashii-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/kana-shii/kanashii-extensions/actions/workflows/auto_cherry_pick.yml) | [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/kana-shii/extensions/repo/index.min.json) |
 
-# Komikku / Mihon / Tachiyomi Extensions
+# Personal Repo
 This repository contains the available extension catalogues is built-in with [Komikku](https://github.com/komikku-app/komikku) app while also usable for the Mihon / Tachiyomi app or other forks.
 
 This repository automatically merges any updates from [Keiyoushi](https://github.com/keiyoushi/extensions-source) every 6 hours to have the best of community contributions. Beside from that, it has a few of my developed extensions or some improvements. Enjoy!
 
 Some extensions from this repo provide better support for Komikku's feature showing related titles.
 
-# Recommend App
+# Extensions with changes
 
-### [Komikku](https://github.com/komikku-app/komikku) based mostly on TachiyomiSY, features of Komikku include:
-- [x] Built-in & official extensions repository
-- [x] Show list of related titles (must enable in Settings/Browse) for all sources.
-- [x] Bulk selection to add to library & change categories of multiple entries all at once, everywhere.
-It can detect duplication being added and give option to allow/skip one by one or allow/skip all duplication.
-Also allow long-click to add/remove single entry to/from library, everywhere.
-- [x] Feed now supports all extensions
-- [x] More Feed items (20 for now)
-- [x] Search for sources in Browse screen when too many sources installed
-- [x] Quick NSFW sources filter in both Extensions/Browse screen
-- [x] Show which source is NSFW in Browse tab
-- [x] Settings button to jump to source's package settings page (to uninstall unwanted sources)
+- [x] Bato.To
+- [x] Cubari
+- [x] E-H
+- [x] Hitomi
+- [x] MangaPark
+- [x] MyReadingManga
+- [x] NH
+- [x] YMO
+- [x] Mangago
+- [X] MangaPlanet
 
 ### [TachiyomiSY](https://github.com/jobobby04/TachiyomiSY) got all the original Tachiyomi app and more:
 * TachiyomiSY will continue! It will basing the fork on a new Tachiyomi spiritual successor called Mihon.

@@ -85,15 +85,12 @@ open class BatoTo(
         val removeOfficialPref = CheckBoxPreference(screen.context).apply {
             key = "${REMOVE_TITLE_VERSION_PREF}_$lang"
             title = "Remove version information from entry titles"
-            summary = "This removes version tags like '(Official)' or '(Yaoi)' from entry titles " +
-                "and helps identify duplicate entries in your library. " +
-                "To update existing entries, remove them from your library (unfavorite) and refresh manually. " +
-                "You might also want to clear the database in advanced settings."
-            setDefaultValue(false)
+            summary = "This removes version tags like '(Official)' from entry titles."
+            setDefaultValue(true)
         }
         val removeCustomPref = EditTextPreference(screen.context).apply {
             key = "${REMOVE_TITLE_CUSTOM_PREF}_$lang"
-            title = "Custom regex to be removed from title"
+            title = "Remove custom information from title"
             summary = preferences.getString("${REMOVE_TITLE_CUSTOM_PREF}_$lang", "") ?: ""
             setDefaultValue("")
         }
@@ -130,7 +127,7 @@ open class BatoTo(
 
     private fun getAltChapterListPref(): Boolean = preferences.getBoolean("${ALT_CHAPTER_LIST_PREF_KEY}_$lang", ALT_CHAPTER_LIST_PREF_DEFAULT_VALUE)
     private fun isRemoveTitleVersion(): Boolean {
-        return preferences.getBoolean("${REMOVE_TITLE_VERSION_PREF}_$lang", false)
+        return preferences.getBoolean("${REMOVE_TITLE_VERSION_PREF}_$lang", true)
     }
     private fun customRemoveTitle(): String =
         preferences.getString("${REMOVE_TITLE_CUSTOM_PREF}_$lang", "") ?: ""
@@ -363,7 +360,7 @@ open class BatoTo(
         return super.mangaDetailsRequest(manga)
     }
     private var titleRegex: Regex =
-        Regex("\\([^()]*\\)|\\{[^{}]*\\}|\\[(?:(?!]).)*]|«[^»]*»|〘[^〙]*〙|「[^」]*」|『[^』]*』|≪[^≫]*≫|﹛[^﹜]*﹜|〖[^〖〗]*〗|𖤍.+?𖤍|《[^》]*》|⌜.+?⌝|⟨[^⟩]*⟩|\\/Official|\\/ Official", RegexOption.IGNORE_CASE)
+        Regex("\\([^()]*\\)|\\{[^{}]*\\}|\\[(?:(?!]).)*]|«[^»]*»|〘[^〙]*〙|「[^」]*」|『[^』]*』|≪[^≫]*≫|﹛[^﹜]*﹜|〖[^〖〗]*〗|𖤍.+?𖤍|《[^》]*》|⌜.+?⌝|⟨[^⟩]*⟩|【[^】]*】|([|].*)|([/].*)|([~].*)|-[^-]*-|‹[^›]*›", RegexOption.IGNORE_CASE)
 
     override fun mangaDetailsParse(document: Document): SManga {
         val infoElement = document.selectFirst("div#mainer div.container-fluid")!!
@@ -382,6 +379,15 @@ open class BatoTo(
             document.selectFirst("div.pb-2.alias-set.line-b-f")?.takeIf { it.hasText() }?.also {
                 append("\n\nAlternative Titles:\n")
                 append(it.text().split('/').joinToString("\n") { "• ${it.trim()}" })
+            }
+
+            val matches = titleRegex.findAll(originalTitle)
+                .toList()
+
+            if (matches.isNotEmpty()) {
+                matches.forEach { match ->
+                    append("\n\nThis entry is a ${match.value} version.")
+                }
             }
         }.trim()
 
