@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.extension.all.deviantart
 
-import android.app.Application
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.preference.EditTextPreference
@@ -17,6 +16,7 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.utils.getPreferencesLazy
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -32,8 +32,6 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.parser.Parser
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -44,9 +42,7 @@ class DeviantArt : HttpSource(), ConfigurableSource {
     override val lang = "all"
     override val supportsLatest = true
 
-    private val preferences: SharedPreferences by lazy {
-        Injekt.get<Application>().getSharedPreferences("source_$id", 0x0000)
-    }
+    private val preferences: SharedPreferences by getPreferencesLazy()
 
     override fun headersBuilder() = Headers.Builder().apply {
         add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0")

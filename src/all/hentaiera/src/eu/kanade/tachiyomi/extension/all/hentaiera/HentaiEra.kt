@@ -22,6 +22,11 @@ class HentaiEra(
     override val useIntermediateSearch: Boolean = true
     override val supportSpeechless: Boolean = true
 
+    override fun Element.mangaTitle(selector: String): String? =
+        mangaFullTitle(selector.replace(".caption", ".gallery_title")).let {
+            if (preferences.shortTitle) it?.shortenTitle() else it
+        }
+
     override fun Element.mangaLang() =
         select("a:has(.g_flag)").attr("href")
             .removeSuffix("/").substringAfterLast("/")
@@ -29,11 +34,6 @@ class HentaiEra(
                 // Include Speechless in search results
                 if (it == LANGUAGE_SPEECHLESS) mangaLang else it
             }
-
-    override fun Element.mangaTitle(selector: String): String? =
-        mangaFullTitle(selector.takeIf { it != ".caption" } ?: ".gallery_title").let {
-            if (preferences.shortTitle) it?.shortenTitle() else it
-        }
 
     override fun popularMangaRequest(page: Int): Request {
         return if (mangaLang.isBlank()) {
@@ -65,8 +65,8 @@ class HentaiEra(
                 listOf(
                     name,
                     it.select(".split_tag").text()
-                        .removePrefix("| ")
-                        .trim(),
+                        .trim()
+                        .removePrefix("| "),
                 )
                     .filter { s -> s.isNotBlank() }
                     .joinToString()
@@ -75,12 +75,6 @@ class HentaiEra(
 
     override fun Element.getCover() =
         selectFirst(".left_cover img")?.imgAttr()
-
-    override val mangaDetailInfoSelector = ".gallery_first"
-
-    /* Pages */
-    override val thumbnailSelector = ".gthumb"
-    override val pageUri = "view"
 
     /* Filters */
     override fun tagsParser(document: Document): List<Genre> {
@@ -93,6 +87,12 @@ class HentaiEra(
                 )
             }
     }
+
+    override val mangaDetailInfoSelector = ".gallery_first"
+
+    /* Pages */
+    override val thumbnailSelector = ".gthumb"
+    override val pageUri = "view"
 
     override fun getCategoryURIs() = listOf(
         SearchFlagFilter("Manga", "mg"),
