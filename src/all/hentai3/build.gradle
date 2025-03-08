@@ -1,5 +1,5 @@
 ext {
-    kmkVersionCode = 1
+    kmkVersionCode = 2
     extName = '3Hentai'
     extClass = '.Hentai3Factory'
     extVersionCode = 1

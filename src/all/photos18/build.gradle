@@ -2,7 +2,7 @@ ext {
     kmkVersionCode = 1
     extName = 'Photos18'
     extClass = '.Photos18'
-    extVersionCode = 5
+    extVersionCode = 6
     isNsfw = true
 }
 
