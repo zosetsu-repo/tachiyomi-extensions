@@ -1,8 +1,8 @@
 ext {
-    kmkVersionCode = 2
+    kmkVersionCode = 1
     extName = 'SchaleNetwork'
     extClass = '.KoharuFactory'
-    extVersionCode = 12
+    extVersionCode = 13
     isNsfw = true
 }
 
