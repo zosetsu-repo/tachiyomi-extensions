@@ -1,63 +1,66 @@
 # Contributing
 
-This guide have some instructions and tips on how to create a new Tachiyomi extension. Please **read it carefully** if you're a new contributor or don't have any experience on the required languages and knowledges.
+This guide have some instructions and tips on how to create a new Tachiyomi extension. Please **read
+it carefully** if you're a new contributor or don't have any experience on the required languages
+and knowledges.
 
-This guide is not definitive and it's being updated over time. If you find any issue on it, feel free to report it through a [Meta Issue](https://github.com/zosetsu-repo/tachiyomi-extensions/issues/new?assignees=&labels=Meta+request&template=06_request_meta.yml) or fixing it directly by submitting a Pull Request.
+This guide is not definitive and it's being updated over time. If you find any issue on it, feel
+free to report it through a [Meta Issue](https://github.com/zosetsu-repo/tachiyomi-extensions/issues/new?assignees=&labels=Meta+request&template=06_request_meta.yml)
+or fixing it directly by submitting a Pull Request.
 
 ## Table of Contents
 
-- [Contributing](#contributing)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-    - [Tools](#tools)
-    - [Cloning the repository](#cloning-the-repository)
-  - [Getting help](#getting-help)
-  - [Writing an extension](#writing-an-extension)
-    - [Setting up a new Gradle module](#setting-up-a-new-gradle-module)
-    - [Loading a subset of Gradle modules](#loading-a-subset-of-gradle-modules)
-      - [Extension file structure](#extension-file-structure)
-      - [AndroidManifest.xml (optional)](#androidmanifestxml-optional)
-      - [build.gradle](#buildgradle)
-    - [Core dependencies](#core-dependencies)
-      - [Extension API](#extension-api)
-      - [DataImage library](#dataimage-library)
-      - [i18n library](#i18n-library)
-      - [Additional dependencies](#additional-dependencies)
-    - [Extension main class](#extension-main-class)
-      - [Main class key variables](#main-class-key-variables)
-    - [Extension call flow](#extension-call-flow)
-      - [Popular Manga](#popular-manga)
-      - [Latest Manga](#latest-manga)
-      - [Manga Search](#manga-search)
-        - [Filters](#filters)
-      - [Manga Details](#manga-details)
-      - [Chapter](#chapter)
-      - [Chapter Pages](#chapter-pages)
-    - [Misc notes](#misc-notes)
-    - [Advanced Extension features](#advanced-extension-features)
-      - [URL intent filter](#url-intent-filter)
-      - [Update strategy](#update-strategy)
-      - [Renaming existing sources](#renaming-existing-sources)
-  - [Multi-source themes](#multi-source-themes)
-    - [The directory structure](#the-directory-structure)
-    - [Development workflow](#development-workflow)
-    - [Scaffolding overrides](#scaffolding-overrides)
-    - [Additional Notes](#additional-notes)
-  - [Running](#running)
-  - [Debugging](#debugging)
-    - [Android Debugger](#android-debugger)
-    - [Logs](#logs)
-    - [Inspecting network calls](#inspecting-network-calls)
-    - [Using external network inspecting tools](#using-external-network-inspecting-tools)
-      - [Setup your proxy server](#setup-your-proxy-server)
-      - [OkHttp proxy setup](#okhttp-proxy-setup)
-  - [Building](#building)
-  - [Submitting the changes](#submitting-the-changes)
-    - [Pull Request checklist](#pull-request-checklist)
+1. [Prerequisites](#prerequisites)
+   1. [Tools](#tools)
+   2. [Cloning the repository](#cloning-the-repository)
+2. [Getting help](#getting-help)
+3. [Writing an extension](#writing-an-extension)
+   1. [Setting up a new Gradle module](#setting-up-a-new-gradle-module)
+   2. [Loading a subset of Gradle modules](#loading-a-subset-of-gradle-modules)
+      1. [Extension file structure](#extension-file-structure)
+      2. [AndroidManifest.xml (optional)](#androidmanifestxml-optional)
+      3. [build.gradle](#buildgradle)
+   3. [Core dependencies](#core-dependencies)
+      1. [Extension API](#extension-api)
+      2. [DataImage library](#dataimage-library)
+      3. [i18n library](#i18n-library)
+      4. [Additional dependencies](#additional-dependencies)
+   4. [Extension main class](#extension-main-class)
+      1. [Main class key variables](#main-class-key-variables)
+   5. [Extension call flow](#extension-call-flow)
+      1. [Popular Manga](#popular-manga)
+      2. [Latest Manga](#latest-manga)
+      3. [Manga Search](#manga-search)
+         1. [Filters](#filters)
+      4. [Manga Details](#manga-details)
+      5. [Chapter](#chapter)
+      6. [Chapter Pages](#chapter-pages)
+   6. [Misc notes](#misc-notes)
+   7. [Advanced Extension features](#advanced-extension-features)
+      1. [URL intent filter](#url-intent-filter)
+      2. [Update strategy](#update-strategy)
+      3. [Renaming existing sources](#renaming-existing-sources)
+4. [Multi-source themes](#multi-source-themes)
+   1. [The directory structure](#the-directory-structure)
+   2. [Development workflow](#development-workflow)
+   3. [Scaffolding overrides](#scaffolding-overrides)
+   4. [Additional Notes](#additional-notes)
+5. [Running](#running)
+6. [Debugging](#debugging)
+   1. [Android Debugger](#android-debugger)
+   2. [Logs](#logs)
+   3. [Inspecting network calls](#inspecting-network-calls)
+   4. [Using external network inspecting tools](#using-external-network-inspecting-tools)
+      1. [Setup your proxy server](#setup-your-proxy-server)
+      2. [OkHttp proxy setup](#okhttp-proxy-setup)
+7. [Building](#building)
+8. [Submitting the changes](#submitting-the-changes)
+   1. [Pull Request checklist](#pull-request-checklist)
 
 ## Prerequisites
 
-Before you start, please note that the ability to use following technologies is **required** and that existing contributors will not actively teach them to you.
+Before you start, please note that the ability to use following technologies is **required** and
+that existing contributors will not actively teach them to you.
 
 - Basic [Android development](https://developer.android.com/)
 - [Kotlin](https://kotlinlang.org/)
@@ -183,17 +186,22 @@ and [negative refspecs](https://github.blog/2020-10-19-git-2-29-released/#user-c
 
 ## Getting help
 
-- There are some features and tricks that are not explored in this document. Refer to existing extension code for examples.
+- There are some features and tricks that are not explored in this document. Refer to existing
+extension code for examples.
 
 ## Writing an extension
 
-The quickest way to get started is to copy an existing extension's folder structure and renaming it as needed. We also recommend reading through a few existing extensions' code before you start.
+The quickest way to get started is to copy an existing extension's folder structure and renaming it
+as needed. We also recommend reading through a few existing extensions' code before you start.
 
 ### Setting up a new Gradle module
 
-Each extension should reside in `src/<lang>/<mysourcename>`. Use `all` as `<lang>` if your target source supports multiple languages or if it could support multiple sources.
+Each extension should reside in `src/<lang>/<mysourcename>`. Use `all` as `<lang>` if your target
+source supports multiple languages or if it could support multiple sources.
 
-The `<lang>` used in the folder inside `src` should be the major `language` part. For example, if you will be creating a `pt-BR` source, use `<lang>` here as `pt` only. Inside the source class, use the full locale string instead.
+The `<lang>` used in the folder inside `src` should be the major `language` part. For example, if
+you will be creating a `pt-BR` source, use `<lang>` here as `pt` only. Inside the source class, use
+the full locale string instead.
 
 ### Loading a subset of Gradle modules
 
@@ -275,7 +283,9 @@ Extensions rely on [extensions-lib](https://github.com/komikku-app/extensions-li
 
 #### DataImage library
 
-[`lib-dataimage`](https://github.com/zosetsu-repo/tachiyomi-extensions/tree/master/lib/dataimage) is a library for handling [base 64 encoded image data](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs) using an [OkHttp interceptor](https://square.github.io/okhttp/interceptors/).
+[`lib-dataimage`](https://github.com/zosetsu-repo/tachiyomi-extensions/tree/master/lib/dataimage) is a library
+or handling [base 64 encoded image data](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs)
+using an [OkHttp interceptor](https://square.github.io/okhttp/interceptors/).
 
 ```groovy
 dependencies {
@@ -295,17 +305,21 @@ dependencies {
 
 #### Additional dependencies
 
-If you find yourself needing additional functionality, you can add more dependencies to your `build.gradle` file.
-Many of [the dependencies](https://github.com/komikku-app/komikku/blob/master/app/build.gradle.kts) from the main Komikku app are exposed to extensions by default.
+If you find yourself needing additional functionality, you can add more dependencies to your `build.gradle`
+file. Many of [the dependencies](https://github.com/komikku-app/komikku/blob/master/app/build.gradle.kts)
+from the main Komikku app are exposed to extensions by default.
 
 > [!NOTE]
 > Several dependencies are already exposed to all extensions via Gradle's version catalog.
 > To view which are available check the `gradle/libs.versions.toml` file.
 
-Notice that we're using `compileOnly` instead of `implementation` if the app already contains it. You could use `implementation` instead for a new dependency, or you prefer not to rely on whatever the main app has at the expense of app size.
+Notice that we're using `compileOnly` instead of `implementation` if the app already contains it.
+You could use `implementation` instead for a new dependency, or you prefer not to rely on whatever
+the main app has at the expense of app size.
 
 > [!IMPORTANT]
-> Using `compileOnly` restricts you to versions that must be compatible with those used in [the latest stable version of Komikku](https://github.com/komikku-app/komikku/releases/latest).
+> Using `compileOnly` restricts you to versions that must be compatible with those used in
+> [the latest stable version of Komikku](https://github.com/komikku-app/komikku/releases/latest).
 
 ### Extension main class
 
@@ -332,21 +346,28 @@ The class which is referenced and defined by `extClass` in `build.gradle`. This 
 
 a.k.a. the Browse source entry point in the app (invoked by tapping on the source name).
 
-- The app calls `fetchPopularManga` which should return a `MangasPage` containing the first batch of found `SManga` entries.
-    - This method supports pagination. When user scrolls the manga list and more results must be fetched, the app calls it again with increasing `page` values (starting with `page=1`). This continues while `MangasPage.hasNextPage` is passed as `true` and `MangasPage.mangas` is not empty.
-- To show the list properly, the app needs `url`, `title` and `thumbnail_url`. You **must** set them here. The rest of the fields could be filled later (refer to Manga Details below).
-    - You should set `thumbnail_url` if is available, if not, `getMangaDetails` will be **immediately** called (this will increase network calls heavily and should be avoided).
+- The app calls `fetchPopularManga` which should return a `MangasPage` containing the first batch of
+found `SManga` entries.
+    - This method supports pagination. When user scrolls the manga list and more results must be fetched,
+    the app calls it again with increasing `page` values (starting with `page=1`). This continues while
+    `MangasPage.hasNextPage` is passed as `true` and `MangasPage.mangas` is not empty.
+- To show the list properly, the app needs `url`, `title` and `thumbnail_url`. You **must** set them
+here. The rest of the fields could be filled later (refer to Manga Details below).
+    - You should set `thumbnail_url` if is available, if not, `getMangaDetails` will be **immediately**
+    called (this will increase network calls heavily and should be avoided).
 
 #### Latest Manga
 
-a.k.a. the Latest source entry point in the app (invoked by tapping on the "Latest" button beside the source name).
+a.k.a. the Latest source entry point in the app (invoked by tapping on the "Latest" button beside
+the source name).
 
 - Enabled if `supportsLatest` is `true` for a source
 - Similar to popular manga, but should be fetching the latest entries from a source.
 
 #### Manga Search
 
-- When the user searches inside the app, `fetchSearchManga` will be called and the rest of the flow is similar to what happens with `fetchPopularManga`.
+- When the user searches inside the app, `fetchSearchManga` will be called and the rest of the flow
+is similar to what happens with `fetchPopularManga`.
     - If search functionality is not available, return `Observable.just(MangasPage(emptyList(), false))`
 - `getFilterList` will be called to get all filters and filter types.
 
@@ -394,10 +415,14 @@ open class UriPartFilter(displayName: String, private val vals: Array<Pair<Strin
 
 #### Chapter
 
-- After a chapter list for the manga is fetched and the app is going to cache the data, `prepareNewChapter` will be called.
-- `SChapter.date_upload` is the [UNIX Epoch time](https://en.wikipedia.org/wiki/Unix_time) **expressed in milliseconds**.
-    - If you don't pass `SChapter.date_upload` and leave it zero, the app will use the default date instead, but it's recommended to always fill it if it's available.
-    - To get the time in milliseconds from a date string, you can use a `SimpleDateFormat` like in the example below.
+- After a chapter list for the manga is fetched and the app is going to cache the data,
+`prepareNewChapter` will be called.
+- `SChapter.date_upload` is the [UNIX Epoch time](https://en.wikipedia.org/wiki/Unix_time)
+**expressed in milliseconds**.
+    - If you don't pass `SChapter.date_upload` and leave it zero, the app will use the default date
+    instead, but it's recommended to always fill it if it's available.
+    - To get the time in milliseconds from a date string, you can use a `SimpleDateFormat` like in
+    the example below.
 
       ```kotlin
       private fun parseDate(dateStr: String): Long {
@@ -413,15 +438,21 @@ open class UriPartFilter(displayName: String, private val vals: Array<Pair<Strin
       }
       ```
 
-      Make sure you make the `SimpleDateFormat` a class constant or variable so it doesn't get recreated for every chapter. If you need to parse or format dates in manga description, create another instance since `SimpleDateFormat` is not thread-safe.
-    - If the parsing have any problem, make sure to return `0L` so the app will use the default date instead.
+      Make sure you make the `SimpleDateFormat` a class constant or variable so it doesn't get
+    recreated for every chapter. If you need to parse or format dates in manga description, create
+    another instance since `SimpleDateFormat` is not thread-safe.
+    - If the parsing have any problem, make sure to return `0L` so the app will use the default date
+    instead.
     - The app will overwrite dates of existing old chapters **UNLESS** `0L` is returned.
-    - The default date has [changed](https://github.com/tachiyomiorg/tachiyomi/pull/7197) in preview ≥ r4442 or stable > 0.13.4.
+    - The default date has [changed](https://github.com/tachiyomiorg/tachiyomi/pull/7197) in
+    preview ≥ r4442 or stable > 0.13.4.
       - In older versions, the default date is always the fetch date.
       - In newer versions, this is the same if every (new) chapter has `0L` returned.
-      - However, if the source only provides the upload date of the latest chapter, you can now set it to the latest chapter and leave other chapters default. The app will automatically set it (instead of fetch date) to every new chapter and leave old chapters' dates untouched.
+      - However, if the source only provides the upload date of the latest chapter, you can now set
+      it to the latest chapter and leave other chapters default. The app will automatically set it (instead of fetch date) to every new chapter and leave old chapters' dates untouched.
 - `getChapterUrl` is called when the user taps "Open in WebView" in the reader.
-  - If the source uses an API to fetch the data, consider overriding this method to return the chapter absolute URL in the website instead.
+  - If the source uses an API to fetch the data, consider overriding this method to return the
+  chapter absolute URL in the website instead.
   - It defaults to the URL provided to the request in `pageListRequest`.
 
 #### Chapter Pages
@@ -435,10 +466,15 @@ open class UriPartFilter(displayName: String, private val vals: Array<Pair<Strin
 
 ### Misc notes
 
-- Sometimes you may find no use for some inherited methods. If so just override them and throw exceptions: `throw UnsupportedOperationException()`
-- You probably will find `getUrlWithoutDomain` useful when parsing the target source URLs. Keep in mind there's a current issue with spaces in the URL though, so if you use it, replace all spaces with URL encoded characters (like `%20`).
-- If possible try to stick to the general workflow from `HttpSource`/`ParsedHttpSource`; breaking them may cause you more headache than necessary.
-- By implementing `ConfigurableSource` you can add settings to your source, which is backed by [`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences).
+- Sometimes you may find no use for some inherited methods. If so just override them and throw
+exceptions: `throw UnsupportedOperationException()`
+- You probably will find `getUrlWithoutDomain` useful when parsing the target source URLs. Keep in
+mind there's a current issue with spaces in the URL though, so if you use it, replace all spaces with
+URL encoded characters (like `%20`).
+- If possible try to stick to the general workflow from `HttpSource`/`ParsedHttpSource`; breaking
+them may cause you more headache than necessary.
+- By implementing `ConfigurableSource` you can add settings to your source, which is backed by
+[`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences).
 
 ### Advanced Extension features
 
@@ -447,7 +483,9 @@ open class UriPartFilter(displayName: String, private val vals: Array<Pair<Strin
 Extensions can define URL intent filters by defining it inside a custom `AndroidManifest.xml` file.
 For an example, refer to [the NHentai module's `AndroidManifest.xml` file](https://github.com/zosetsu-repo/tachiyomi-extensions/blob/master/src/all/nhentai/AndroidManifest.xml) and [its corresponding `NHUrlActivity` handler](https://github.com/zosetsu-repo/tachiyomi-extensions/blob/master/src/all/nhentai/src/eu/kanade/tachiyomi/extension/all/nhentai/NHUrlActivity.kt).
 
-To test if the URL intent filter is working as expected, you can try opening the website in a browser and navigating to the endpoint that was added as a filter or clicking a hyperlink. Alternatively, you can use the `adb` command below.
+To test if the URL intent filter is working as expected, you can try opening the website in a browser
+and navigating to the endpoint that was added as a filter or clicking a hyperlink. Alternatively,
+you can use the `adb` command below.
 
 ```console
 $ adb shell am start -d "<your-link>" -a android.intent.action.VIEW
@@ -465,8 +503,11 @@ $ adb shell am start -d "<your-link>" -a android.intent.action.VIEW
 
 There is some cases where titles in a source will always only have the same chapter list (i.e. immutable), and don't need to be included in a global update of the app because of that, saving a lot of requests and preventing causing unnecessary damage to the source servers. To change the update strategy of a `SManga`, use the `update_strategy` field. You can find below a description of the current possible values.
 
-- `UpdateStrategy.ALWAYS_UPDATE`: Titles marked as always update will be included in the library update if they aren't excluded by additional restrictions.
-- `UpdateStrategy.ONLY_FETCH_ONCE`: Titles marked as only fetch once will be automatically skipped during library updates. Useful for cases where the series is previously known to be finished and have only a single chapter, for example.
+- `UpdateStrategy.ALWAYS_UPDATE`: Titles marked as always update will be included in the library
+update if they aren't excluded by additional restrictions.
+- `UpdateStrategy.ONLY_FETCH_ONCE`: Titles marked as only fetch once will be automatically skipped
+during library updates. Useful for cases where the series is previously known to be finished and have
+only a single chapter, for example.
 
 If not set, it defaults to `ALWAYS_UPDATE`.
 
@@ -483,7 +524,8 @@ override val id: Long = <the-id>
 Then the class name and the `name` attribute value can be changed. Also don't forget to update the extension name and class name in the individual Gradle file if it is not a multisrc extension.
 
 > [!IMPORTANT]
-> The package name **needs** to be the same (even if it has the old name), otherwise users will not receive the extension update when it gets published in the repository. If you're changing the name of a multisrc source, you can manually set it in the generator class of the theme by using `pkgName = "oldpackagename"`.
+> The package name **needs** to be the same (even if it has the old name), otherwise users will not
+> receive the extension update when it gets published in the repository.
 
 The `id` also needs to be explicity set to the old value if you're changing the `lang` attribute.
 
@@ -620,7 +662,8 @@ with open(f"{package}/src/{source}.kt", "w") as f:
 
 ## Running
 
-To make local development more convenient, you can use the following run configuration to launch Komikku directly at the Browse panel:
+To make local development more convenient, you can use the following run configuration to launch
+Komikku directly at the Browse panel:
 
 ![](https://i.imgur.com/STy0UFY.png)
 
@@ -651,7 +694,8 @@ You can leverage the Android Debugger to step through your extension while debug
 
 You *cannot* simply use Android Studio's `Debug 'module.name'` -> this will most likely result in an error while launching.
 
-Instead, once you've built and installed your extension on the target device, use `Attach Debugger to Android Process` to start debugging Komikku.
+Instead, once you've built and installed your extension on the target device, use
+`Attach Debugger to Android Process` to start debugging Komikku.
 
 ![](https://i.imgur.com/muhXyfu.png)
 
@@ -752,7 +796,8 @@ If all went well, you should see all requests and responses made by the source i
 
 ## Building
 
-APKs can be created in Android Studio via `Build > Build Bundle(s) / APK(s) > Build APK(s)` or `Build > Generate Signed Bundle / APK`.
+APKs can be created in Android Studio via `Build > Build Bundle(s) / APK(s) > Build APK(s)` or
+`Build > Generate Signed Bundle / APK`.
 
 If for some reason you decide to build the APK from the command line, you can use the following
 command (because you're doing things differently than expected, I assume you have some
@@ -767,10 +812,14 @@ $ ./gradlew src:<lang>:<source>:assembleDebug
 
 When you feel confident about your changes, submit a new Pull Request so your code can be reviewed and merged if it's approved. We encourage following a [GitHub Standard Fork & Pull Request Workflow](https://gist.github.com/Chaser324/ce0505fbed06b947d962) and following the good practices of the workflow, such as not commiting directly to `master`: always create a new branch for your changes.
 
-If you are more comfortable about using Git GUI-based tools, you can refer to [this guide](https://learntodroid.com/how-to-use-git-and-github-in-android-studio/) about the Git integration inside Android Studio, specifically the "How to Contribute to an to Existing Git Repository in Android Studio" section of the guide.
+If you are more comfortable about using Git GUI-based tools, you can refer to [this guide](https://learntodroid.com/how-to-use-git-and-github-in-android-studio/)
+about the Git integration inside Android Studio, specifically the "How to Contribute to an to Existing
+Git Repository in Android Studio" section of the guide.
 
 > [!IMPORTANT]
-> Make sure you have generated the extension icon using the linked Icon Generator tool in the [Tools](#tools) section. The icon **must follow the pattern** adopted by all other extensions: a square with rounded corners. Make sure to remove the generated `web_hi_res_512.png`.
+> Make sure you have generated the extension icon using the linked Icon Generator tool in the [Tools](#tools)
+> section. The icon **must follow the pattern** adopted by all other extensions: a square with rounded
+> corners. Make sure to remove the generated `web_hi_res_512.png`.
 
 Please **do test your changes by compiling it through Android Studio** before submitting it. Obvious untested PRs will not be merged, such as ones created with the GitHub web interface. Also make sure to follow the PR checklist available in the PR body field when creating a new PR. As a reference, you can find it below.
 
