@@ -2,7 +2,7 @@
 
 ## Why
 
-Link to the related issue where it is explained why it was removed. 
+Link to the related issue where it is explained why it was removed.
 Or a short description to why it was removed.
 Or both the related issue link and short description to why
 
