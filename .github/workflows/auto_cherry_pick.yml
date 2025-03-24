@@ -36,7 +36,7 @@ jobs:
 
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          
+
           git fetch origin keiyoushi
           git checkout keiyoushi
           echo "Last commit: `git log -1 --oneline`"
@@ -47,13 +47,13 @@ jobs:
           echo "Incoming commits:"
           echo "`git log keiyoushi..keiyoushi-upstream/main --oneline`"
           upcoming_changes=`git log keiyoushi..keiyoushi-upstream/main --pretty="%h"`
-          
+
           # Read the upcoming changes' hash into an array
           upcoming_changes_hash=()
           while read -r line; do
             upcoming_changes_hash+=("$line")
           done <<< "$upcoming_changes"
-          
+
           git checkout master
           echo "Last commit: `git log -1 --oneline`"
           # Loop through indices in reverse order
@@ -66,7 +66,7 @@ jobs:
               echo "[$i]: skip '${upcoming_changes_hash[i]}'"
             fi
           done
-          
+
           echo "Last commit: `git log -1 --oneline`"
 
           echo "LATEST_HASH=${latest_hash}" >> $GITHUB_ENV
