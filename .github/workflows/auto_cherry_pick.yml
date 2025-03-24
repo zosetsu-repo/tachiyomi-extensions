@@ -18,7 +18,7 @@ permissions:
 jobs:
   auto-merge:
     name: Auto cherry-pick Keiyoushi
-    if: github.repository == 'tachiyomi-repo/tachiyomi-extensions'
+    if: github.repository == 'zosetsu-repo/tachiyomi-extensions'
     runs-on: ubuntu-latest
 
     steps:
