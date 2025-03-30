@@ -1,5 +1,5 @@
 ext {
-    kmkVersionCode = 8
+    kmkVersionCode = 9
     extName = 'MissKon (MrCong)'
     extClass = '.MissKon'
     extVersionCode = 1
@@ -7,3 +7,7 @@ ext {
 }
 
 apply from: "$rootDir/common.gradle"
+
+dependencies {
+    implementation(project(":lib:randomua"))
+}

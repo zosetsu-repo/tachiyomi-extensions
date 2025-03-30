@@ -3,17 +3,20 @@ package eu.kanade.tachiyomi.extension.all.misskon
 import android.content.SharedPreferences
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
+import eu.kanade.tachiyomi.lib.randomua.UserAgentType
+import eu.kanade.tachiyomi.lib.randomua.setRandomUserAgent
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.interceptor.rateLimitHost
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
-import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.source.online.ParsedHttpSource
 import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.utils.getPreferencesLazy
+import keiyoushi.utils.tryParse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,15 +25,42 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import uy.kohesive.injekt.api.get
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import kotlin.collections.List
+import kotlin.collections.MutableMap
+import kotlin.collections.emptyList
+import kotlin.collections.filterIsInstance
+import kotlin.collections.firstOrNull
+import kotlin.collections.forEach
+import kotlin.collections.indices
+import kotlin.collections.joinToString
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapIndexed
+import kotlin.collections.mapNotNull
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableMapOf
+import kotlin.collections.plusAssign
+import kotlin.collections.putAll
+import kotlin.collections.set
+import kotlin.collections.toList
+import kotlin.collections.toMutableList
+import kotlin.collections.toTypedArray
 
-class MissKon : ConfigurableSource, HttpSource() {
+class MissKon : ConfigurableSource, ParsedHttpSource() {
     override val name = "MissKon (MrCong)"
     override val lang = "all"
     override val supportsLatest = true
     override val versionId = 2
 
     override val baseUrl = "https://misskon.com"
+
+    override val client = network.cloudflareClient.newBuilder()
+        .rateLimitHost(baseUrl.toHttpUrl(), 10, 1, TimeUnit.SECONDS)
+        .setRandomUserAgent(UserAgentType.MOBILE)
+        .build()
 
     override fun headersBuilder() = super.headersBuilder()
         .add("Referer", "$baseUrl/")
@@ -63,27 +93,28 @@ class MissKon : ConfigurableSource, HttpSource() {
         return searchMangaRequest(page, "", FilterList(topDaysFilter))
     }
 
-    override fun popularMangaParse(response: Response) = latestUpdatesParse(response)
+    override fun popularMangaSelector() = "div#main-content div.post-listing article.item-list"
+
+    override fun popularMangaNextPageSelector() = "div#main-content div.pagination span.current + a.page"
+
+    override fun popularMangaFromElement(element: Element) =
+        SManga.create().apply {
+            val post = element.select("h2.post-box-title a").first()!!
+            setUrlWithoutDomain(post.absUrl("href"))
+            title = post.text()
+            thumbnail_url = element.selectFirst("div.post-thumbnail img")?.imgAttr()
+            val meta = element.selectFirst("p.post-meta")
+            description = "View: ${meta?.select("span.post-views")?.text() ?: "---"}"
+            genre = meta?.parseTags()
+        }
 
     override fun latestUpdatesRequest(page: Int) = GET("$baseUrl/page/$page", headers)
 
-    override fun latestUpdatesParse(response: Response): MangasPage {
-        val document = response.asJsoup()
-        val mangas = document.select("div#main-content div.post-listing article.item-list")
-            .map { element ->
-                SManga.create().apply {
-                    val post = element.select("h2.post-box-title a").first()!!
-                    setUrlWithoutDomain(post.absUrl("href"))
-                    title = post.text()
-                    thumbnail_url = element.selectFirst("div.post-thumbnail img")?.imgAttr()
-                    val meta = element.selectFirst("p.post-meta")
-                    description = "View: ${meta?.select("span.post-views")?.text() ?: "---"}"
-                    genre = meta?.parseTags()
-                }
-            }
-        val isLastPage = document.selectFirst("div#main-content div.pagination span.current + a.page")
-        return MangasPage(mangas, hasNextPage = isLastPage != null)
-    }
+    override fun latestUpdatesSelector() = popularMangaSelector()
+
+    override fun latestUpdatesNextPageSelector() = popularMangaNextPageSelector()
+
+    override fun latestUpdatesFromElement(element: Element) = popularMangaFromElement(element)
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val tagFilter = filters.filterIsInstance<TagsFilter>().firstOrNull()
@@ -115,7 +146,11 @@ class MissKon : ConfigurableSource, HttpSource() {
         return GET(url.build(), headers)
     }
 
-    override fun searchMangaParse(response: Response) = latestUpdatesParse(response)
+    override fun searchMangaSelector() = popularMangaSelector()
+
+    override fun searchMangaNextPageSelector() = popularMangaNextPageSelector()
+
+    override fun searchMangaFromElement(element: Element) = popularMangaFromElement(element)
 
     /* Related titles */
     override fun relatedMangaListParse(response: Response): List<SManga> {
@@ -130,8 +165,7 @@ class MissKon : ConfigurableSource, HttpSource() {
     }
 
     /* Details */
-    override fun mangaDetailsParse(response: Response): SManga {
-        val document = response.asJsoup()
+    override fun mangaDetailsParse(document: Document): SManga {
         return SManga.create().apply {
             title = document.select(".post-title span").text()
             val view = document.select("p.post-meta span.post-views").text()
@@ -155,11 +189,32 @@ class MissKon : ConfigurableSource, HttpSource() {
         }
     }
 
-    override fun chapterListParse(response: Response): List<SChapter> {
-        throw UnsupportedOperationException()
+    override fun chapterListSelector() = throw UnsupportedOperationException()
+
+    override fun chapterFromElement(element: Element): SChapter = throw UnsupportedOperationException()
+
+    override suspend fun getChapterList(manga: SManga): List<SChapter> {
+        client.newCall(chapterListRequest(manga))
+            .execute().use { response ->
+                val document = response.asJsoup()
+                val dateStr = document.selectFirst(".entry img")?.imgAttr()
+                    ?.let { url ->
+                        FULL_DATE_REGEX.find(url)?.groupValues?.get(1)
+                            ?: YEAR_MONTH_REGEX.find(url)?.groupValues?.get(1)?.let { "$it/01" }
+                    }
+
+                return listOf(
+                    SChapter.create().apply {
+                        chapter_number = 0F
+                        setUrlWithoutDomain(manga.url)
+                        name = "Gallery"
+                        date_upload = FULL_DATE_FORMAT.tryParse(dateStr)
+                    },
+                )
+            }
     }
 
-    override fun pageListParse(response: Response): List<Page> {
+    override fun pageListParse(document: Document): List<Page> {
         throw UnsupportedOperationException()
     }
 
@@ -174,15 +229,6 @@ class MissKon : ConfigurableSource, HttpSource() {
                 }
             }
             .joinToString { it.text() }
-    }
-
-    override suspend fun getChapterList(manga: SManga): List<SChapter> {
-        return listOf(
-            SChapter.create().apply {
-                setUrlWithoutDomain(manga.url)
-                name = "Gallery"
-            },
-        )
     }
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
@@ -214,7 +260,7 @@ class MissKon : ConfigurableSource, HttpSource() {
             image.imgAttr()
         }
 
-    override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
+    override fun imageUrlParse(document: Document) = throw UnsupportedOperationException()
 
     /* Filters */
     private val tagList: MutableMap<String, String> = mutableMapOf()
@@ -264,17 +310,22 @@ class MissKon : ConfigurableSource, HttpSource() {
 
     private fun Element.imgAttr(): String {
         return when {
-            hasAttr("data-original") -> attr("abs:data-original")
-            hasAttr("data-src") -> attr("abs:data-src")
-            hasAttr("data-bg") -> attr("abs:data-bg")
-            hasAttr("data-srcset") -> attr("abs:data-srcset")
-            hasAttr("data-srcset") -> attr("abs:data-srcset")
-            else -> attr("abs:src")
+            hasAttr("data-original") -> absUrl("data-original")
+            hasAttr("data-src") -> absUrl("data-src")
+            hasAttr("data-bg") -> absUrl("data-bg")
+            hasAttr("data-srcset") -> absUrl("data-srcset")
+            hasAttr("data-srcset") -> absUrl("data-srcset")
+            else -> absUrl("src")
         }
     }
 
     companion object {
         private const val PREF_TOP_DAYS = "pref_top_days"
         private const val DEFAULT_TOP_DAYS = "1"
+
+        private val FULL_DATE_REGEX = Regex("""/(\d{4}/\d{2}/\d{2})/""")
+        private val YEAR_MONTH_REGEX = Regex("""/(\d{4}/\d{2})/""")
+
+        private val FULL_DATE_FORMAT = SimpleDateFormat("yyyy/MM/dd", Locale.US)
     }
 }
