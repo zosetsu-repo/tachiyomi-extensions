@@ -28,26 +28,6 @@ import org.jsoup.nodes.Element
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import kotlin.collections.List
-import kotlin.collections.MutableMap
-import kotlin.collections.emptyList
-import kotlin.collections.filterIsInstance
-import kotlin.collections.firstOrNull
-import kotlin.collections.forEach
-import kotlin.collections.indices
-import kotlin.collections.joinToString
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.mapIndexed
-import kotlin.collections.mapNotNull
-import kotlin.collections.mutableListOf
-import kotlin.collections.mutableMapOf
-import kotlin.collections.plusAssign
-import kotlin.collections.putAll
-import kotlin.collections.set
-import kotlin.collections.toList
-import kotlin.collections.toMutableList
-import kotlin.collections.toTypedArray
 
 class MissKon : ConfigurableSource, ParsedHttpSource() {
     override val name = "MissKon (MrCong)"
@@ -220,13 +200,11 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
 
     private fun Element.parseTags(selector: String = ".post-tag a, .post-cats a"): String {
         return select(selector)
-            .also { tags ->
-                tags.map {
-                    val uri = it.attr("href")
-                        .removeSuffix("/")
-                        .substringAfterLast('/')
-                    tagList[it.text()] = uri
-                }
+            .onEach {
+                val uri = it.attr("href")
+                    .removeSuffix("/")
+                    .substringAfterLast('/')
+                tagList = tagList.plus(it.text() to uri)
             }
             .joinToString { it.text() }
     }
@@ -263,8 +241,6 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
     override fun imageUrlParse(document: Document) = throw UnsupportedOperationException()
 
     /* Filters */
-    private val tagList: MutableMap<String, String> = mutableMapOf()
-
     private val scope = CoroutineScope(Dispatchers.IO)
     private fun launchIO(block: () -> Unit) = scope.launch { block() }
     private var tagsFetched = false
@@ -273,28 +249,56 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
     private fun getTags() {
         launchIO {
             if (!tagsFetched && tagsFetchAttempt < 3) {
-                val result = runCatching {
-                    client.newCall(GET("$baseUrl/sets/", headers))
-                        .execute().asJsoup()
-                        .select(".entry .tag-counterz a[href*=/tag/]")
-                        .mapNotNull {
-                            Pair(
-                                it.select("strong").text(),
-                                it.attr("href")
-                                    .removeSuffix("/")
-                                    .substringAfterLast('/'),
-                            )
+                try {
+                    client.newCall(GET("$baseUrl/sets/", headers)).execute()
+                        .use { response ->
+                            response.asJsoup()
+                                .select(".entry .tag-counterz a[href*=/tag/]")
+                                .mapNotNull {
+                                    Pair(
+                                        it.select("strong").text(),
+                                        it.attr("href")
+                                            .removeSuffix("/")
+                                            .substringAfterLast('/'),
+                                    )
+                                }
                         }
+                        .onEach {
+                            tagList = tagList.plus(it)
+                        }
+                        .also {
+                            tagsFetched = true
+                        }
+                } catch (_: Exception) {
+                } finally {
+                    tagsFetchAttempt++
                 }
-                if (result.isSuccess) {
-                    tagList["<Select>"] = ""
-                    tagList.putAll(result.getOrNull() ?: emptyList())
-                    tagsFetched = true
-                }
-                tagsFetchAttempt++
             }
         }
     }
+
+    private var tagList: Set<Pair<String, String>> = loadTagListFromPreferences()
+        set(value) {
+            preferences.edit().putString(
+                TAG_LIST_PREF,
+                value.joinToString("%") { "${it.first}|${it.second}" },
+            ).apply()
+            field = value
+        }
+
+    private fun loadTagListFromPreferences(): Set<Pair<String, String>> =
+        preferences.getString(TAG_LIST_PREF, "")
+            ?.let {
+                it.split('%').mapNotNull { tag ->
+                    tag.split('|')
+                        .let { splits ->
+                            if (splits.size == 2) Pair(splits[0], splits[1]) else null
+                        }
+                }
+            }
+            ?.toSet()
+            // Load default tags
+            .let { if (it.isNullOrEmpty()) TagList else it }
 
     override fun getFilterList(): FilterList {
         getTags()
@@ -303,7 +307,7 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
             if (tagList.isEmpty()) {
                 Filter.Header("Hit refresh to load Tags")
             } else {
-                TagsFilter("Tag", tagList.toList())
+                TagsFilter("Browse Tag", tagList.toList())
             },
         )
     }
@@ -327,5 +331,7 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
         private val YEAR_MONTH_REGEX = Regex("""/(\d{4}/\d{2})/""")
 
         private val FULL_DATE_FORMAT = SimpleDateFormat("yyyy/MM/dd", Locale.US)
+
+        private const val TAG_LIST_PREF = "TAG_LIST"
     }
 }
