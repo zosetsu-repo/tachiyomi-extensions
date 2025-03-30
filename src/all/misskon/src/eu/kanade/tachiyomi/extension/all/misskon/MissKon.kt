@@ -61,6 +61,19 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
         }.also(screen::addPreference)
     }
 
+    override fun latestUpdatesSelector() = "div#main-content div.post-listing article.item-list"
+
+    override fun latestUpdatesFromElement(element: Element) =
+        SManga.create().apply {
+            val post = element.select("h2.post-box-title a").first()!!
+            setUrlWithoutDomain(post.absUrl("href"))
+            title = post.text()
+            thumbnail_url = element.selectFirst("div.post-thumbnail img")?.imgAttr()
+            val meta = element.selectFirst("p.post-meta")
+            description = "View: ${meta?.select("span.post-views")?.text() ?: "---"}"
+            genre = meta?.parseTags()
+        }
+
     override fun popularMangaRequest(page: Int): Request {
         val topDays = (preferences.topDays?.toInt() ?: 0) + 1
         val topDaysFilter = TopDaysFilter(
@@ -73,28 +86,7 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
         return searchMangaRequest(page, "", FilterList(topDaysFilter))
     }
 
-    override fun popularMangaSelector() = "div#main-content div.post-listing article.item-list"
-
-    override fun popularMangaNextPageSelector() = "div#main-content div.pagination span.current + a.page"
-
-    override fun popularMangaFromElement(element: Element) =
-        SManga.create().apply {
-            val post = element.select("h2.post-box-title a").first()!!
-            setUrlWithoutDomain(post.absUrl("href"))
-            title = post.text()
-            thumbnail_url = element.selectFirst("div.post-thumbnail img")?.imgAttr()
-            val meta = element.selectFirst("p.post-meta")
-            description = "View: ${meta?.select("span.post-views")?.text() ?: "---"}"
-            genre = meta?.parseTags()
-        }
-
     override fun latestUpdatesRequest(page: Int) = GET("$baseUrl/page/$page", headers)
-
-    override fun latestUpdatesSelector() = popularMangaSelector()
-
-    override fun latestUpdatesNextPageSelector() = popularMangaNextPageSelector()
-
-    override fun latestUpdatesFromElement(element: Element) = popularMangaFromElement(element)
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val tagFilter = filters.filterIsInstance<TagsFilter>().firstOrNull()
@@ -126,23 +118,19 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
         return GET(url.build(), headers)
     }
 
-    override fun searchMangaSelector() = popularMangaSelector()
+    override fun latestUpdatesNextPageSelector() = "div#main-content div.pagination span.current + a.page"
 
-    override fun searchMangaNextPageSelector() = popularMangaNextPageSelector()
+    override fun popularMangaNextPageSelector() = latestUpdatesNextPageSelector()
 
-    override fun searchMangaFromElement(element: Element) = popularMangaFromElement(element)
+    override fun searchMangaNextPageSelector() = latestUpdatesNextPageSelector()
 
-    /* Related titles */
-    override fun relatedMangaListParse(response: Response): List<SManga> {
-        val document = response.asJsoup()
-        return document.select(".content > .yarpp-related a.yarpp-thumbnail").map { element ->
-            SManga.create().apply {
-                setUrlWithoutDomain(element.attr("href"))
-                title = element.attr("title")
-                thumbnail_url = element.selectFirst("img")?.imgAttr()
-            }
-        }
-    }
+    override fun popularMangaSelector() = latestUpdatesSelector()
+
+    override fun searchMangaSelector() = latestUpdatesSelector()
+
+    override fun popularMangaFromElement(element: Element) = latestUpdatesFromElement(element)
+
+    override fun searchMangaFromElement(element: Element) = latestUpdatesFromElement(element)
 
     /* Details */
     override fun mangaDetailsParse(document: Document): SManga {
@@ -166,6 +154,29 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
                 "Password: $password\n" +
                 downloadLinks
             genre = document.parseTags()
+        }
+    }
+
+    private fun Element.parseTags(selector: String = ".post-tag a, .post-cats a"): String {
+        return select(selector)
+            .onEach {
+                val uri = it.attr("href")
+                    .removeSuffix("/")
+                    .substringAfterLast('/')
+                tagList = tagList.plus(it.text() to uri)
+            }
+            .joinToString { it.text() }
+    }
+
+    /* Related titles */
+    override fun relatedMangaListParse(response: Response): List<SManga> {
+        val document = response.asJsoup()
+        return document.select(".content > .yarpp-related a.yarpp-thumbnail").map { element ->
+            SManga.create().apply {
+                setUrlWithoutDomain(element.attr("href"))
+                title = element.attr("title")
+                thumbnail_url = element.selectFirst("img")?.imgAttr()
+            }
         }
     }
 
@@ -195,38 +206,19 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
     }
 
     override fun pageListParse(document: Document): List<Page> {
-        throw UnsupportedOperationException()
-    }
-
-    private fun Element.parseTags(selector: String = ".post-tag a, .post-cats a"): String {
-        return select(selector)
-            .onEach {
-                val uri = it.attr("href")
-                    .removeSuffix("/")
-                    .substringAfterLast('/')
-                tagList = tagList.plus(it.text() to uri)
-            }
-            .joinToString { it.text() }
-    }
-
-    override suspend fun getPageList(chapter: SChapter): List<Page> {
         val chapterPage = mutableListOf<String>()
-        client.newCall(pageListRequest(chapter))
-            .execute().use { response ->
-                val document = response.asJsoup()
-                val pages = document
-                    .select("div.page-link:first-child a")
-                    .mapNotNull {
-                        it.absUrl("href")
-                    }
-
-                chapterPage += parseImageList(document).toMutableList()
-
-                pages.forEach { url ->
-                    val request = GET(url, headers)
-                    chapterPage += parseImageList(client.newCall(request).execute().asJsoup())
-                }
+        val pages = document
+            .select("div.page-link:first-child a")
+            .mapNotNull {
+                it.absUrl("href")
             }
+
+        chapterPage += parseImageList(document).toMutableList()
+
+        pages.forEach { url ->
+            val request = GET(url, headers)
+            chapterPage += parseImageList(client.newCall(request).execute().asJsoup())
+        }
 
         return chapterPage.mapIndexed { index, url ->
             Page(index, imageUrl = url)
