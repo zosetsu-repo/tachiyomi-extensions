@@ -4,16 +4,18 @@ import android.content.SharedPreferences
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.interceptor.rateLimitHost
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
-import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import eu.kanade.tachiyomi.source.online.ParsedHttpSource
 import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.utils.getPreferencesLazy
+import keiyoushi.utils.tryParse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,15 +24,21 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import uy.kohesive.injekt.api.get
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
-class MissKon : ConfigurableSource, HttpSource() {
+class MissKon : ConfigurableSource, ParsedHttpSource() {
     override val name = "MissKon (MrCong)"
     override val lang = "all"
     override val supportsLatest = true
     override val versionId = 2
 
     override val baseUrl = "https://misskon.com"
+
+    override val client = network.cloudflareClient.newBuilder()
+        .rateLimitHost(baseUrl.toHttpUrl(), 10, 1, TimeUnit.SECONDS)
+        .build()
 
     override fun headersBuilder() = super.headersBuilder()
         .add("Referer", "$baseUrl/")
@@ -51,6 +59,20 @@ class MissKon : ConfigurableSource, HttpSource() {
         }.also(screen::addPreference)
     }
 
+    override fun latestUpdatesSelector() = "div#main-content div.post-listing article.item-list"
+
+    override fun latestUpdatesFromElement(element: Element) =
+        SManga.create().apply {
+            val post = element.select("h2.post-box-title a").first()!!
+            setUrlWithoutDomain(post.absUrl("href"))
+            title = post.text()
+            thumbnail_url = element.selectFirst("div.post-thumbnail img")?.imgAttr()
+            val meta = element.selectFirst("p.post-meta")
+            description = "View: ${meta?.select("span.post-views")?.text() ?: "---"}"
+            genre = meta?.parseTags()
+            update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
+        }
+
     override fun popularMangaRequest(page: Int): Request {
         val topDays = (preferences.topDays?.toInt() ?: 0) + 1
         val topDaysFilter = TopDaysFilter(
@@ -63,27 +85,7 @@ class MissKon : ConfigurableSource, HttpSource() {
         return searchMangaRequest(page, "", FilterList(topDaysFilter))
     }
 
-    override fun popularMangaParse(response: Response) = latestUpdatesParse(response)
-
     override fun latestUpdatesRequest(page: Int) = GET("$baseUrl/page/$page", headers)
-
-    override fun latestUpdatesParse(response: Response): MangasPage {
-        val document = response.asJsoup()
-        val mangas = document.select("div#main-content div.post-listing article.item-list")
-            .map { element ->
-                SManga.create().apply {
-                    val post = element.select("h2.post-box-title a").first()!!
-                    setUrlWithoutDomain(post.absUrl("href"))
-                    title = post.text()
-                    thumbnail_url = element.selectFirst("div.post-thumbnail img")?.imgAttr()
-                    val meta = element.selectFirst("p.post-meta")
-                    description = "View: ${meta?.select("span.post-views")?.text() ?: "---"}"
-                    genre = meta?.parseTags()
-                }
-            }
-        val isLastPage = document.selectFirst("div#main-content div.pagination span.current + a.page")
-        return MangasPage(mangas, hasNextPage = isLastPage != null)
-    }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val tagFilter = filters.filterIsInstance<TagsFilter>().firstOrNull()
@@ -115,23 +117,22 @@ class MissKon : ConfigurableSource, HttpSource() {
         return GET(url.build(), headers)
     }
 
-    override fun searchMangaParse(response: Response) = latestUpdatesParse(response)
+    override fun latestUpdatesNextPageSelector() = "div#main-content div.pagination span.current + a.page"
 
-    /* Related titles */
-    override fun relatedMangaListParse(response: Response): List<SManga> {
-        val document = response.asJsoup()
-        return document.select(".content > .yarpp-related a.yarpp-thumbnail").map { element ->
-            SManga.create().apply {
-                setUrlWithoutDomain(element.attr("href"))
-                title = element.attr("title")
-                thumbnail_url = element.selectFirst("img")?.imgAttr()
-            }
-        }
-    }
+    override fun popularMangaNextPageSelector() = latestUpdatesNextPageSelector()
+
+    override fun searchMangaNextPageSelector() = latestUpdatesNextPageSelector()
+
+    override fun popularMangaSelector() = latestUpdatesSelector()
+
+    override fun searchMangaSelector() = latestUpdatesSelector()
+
+    override fun popularMangaFromElement(element: Element) = latestUpdatesFromElement(element)
+
+    override fun searchMangaFromElement(element: Element) = latestUpdatesFromElement(element)
 
     /* Details */
-    override fun mangaDetailsParse(response: Response): SManga {
-        val document = response.asJsoup()
+    override fun mangaDetailsParse(document: Document): SManga {
         return SManga.create().apply {
             title = document.select(".post-title span").text()
             val view = document.select("p.post-meta span.post-views").text()
@@ -155,54 +156,68 @@ class MissKon : ConfigurableSource, HttpSource() {
         }
     }
 
-    override fun chapterListParse(response: Response): List<SChapter> {
-        throw UnsupportedOperationException()
-    }
-
-    override fun pageListParse(response: Response): List<Page> {
-        throw UnsupportedOperationException()
-    }
-
     private fun Element.parseTags(selector: String = ".post-tag a, .post-cats a"): String {
         return select(selector)
-            .also { tags ->
-                tags.map {
-                    val uri = it.attr("href")
-                        .removeSuffix("/")
-                        .substringAfterLast('/')
-                    tagList[it.text()] = uri
-                }
+            .onEach {
+                val uri = it.attr("href")
+                    .removeSuffix("/")
+                    .substringAfterLast('/')
+                tagList = tagList.plus(it.text() to uri)
             }
             .joinToString { it.text() }
     }
 
-    override suspend fun getChapterList(manga: SManga): List<SChapter> {
-        return listOf(
-            SChapter.create().apply {
-                setUrlWithoutDomain(manga.url)
-                name = "Gallery"
-            },
-        )
+    /* Related titles */
+    override fun relatedMangaListParse(response: Response): List<SManga> {
+        val document = response.asJsoup()
+        return document.select(".content > .yarpp-related a.yarpp-thumbnail").map { element ->
+            SManga.create().apply {
+                setUrlWithoutDomain(element.attr("href"))
+                title = element.attr("title")
+                thumbnail_url = element.selectFirst("img")?.imgAttr()
+            }
+        }
     }
 
-    override suspend fun getPageList(chapter: SChapter): List<Page> {
-        val chapterPage = mutableListOf<String>()
-        client.newCall(pageListRequest(chapter))
+    override fun chapterListSelector() = throw UnsupportedOperationException()
+
+    override fun chapterFromElement(element: Element): SChapter = throw UnsupportedOperationException()
+
+    override suspend fun getChapterList(manga: SManga): List<SChapter> {
+        client.newCall(chapterListRequest(manga))
             .execute().use { response ->
                 val document = response.asJsoup()
-                val pages = document
-                    .select("div.page-link:first-child a")
-                    .mapNotNull {
-                        it.absUrl("href")
+                val dateStr = document.selectFirst(".entry img")?.imgAttr()
+                    ?.let { url ->
+                        FULL_DATE_REGEX.find(url)?.groupValues?.get(1)
+                            ?: YEAR_MONTH_REGEX.find(url)?.groupValues?.get(1)?.let { "$it/01" }
                     }
 
-                chapterPage += parseImageList(document).toMutableList()
-
-                pages.forEach { url ->
-                    val request = GET(url, headers)
-                    chapterPage += parseImageList(client.newCall(request).execute().asJsoup())
-                }
+                return listOf(
+                    SChapter.create().apply {
+                        chapter_number = 0F
+                        setUrlWithoutDomain(manga.url)
+                        name = "Gallery"
+                        date_upload = FULL_DATE_FORMAT.tryParse(dateStr)
+                    },
+                )
             }
+    }
+
+    override fun pageListParse(document: Document): List<Page> {
+        val chapterPage = mutableListOf<String>()
+        val pages = document
+            .select("div.page-link:first-child a")
+            .mapNotNull {
+                it.absUrl("href")
+            }
+
+        chapterPage += parseImageList(document).toMutableList()
+
+        pages.forEach { url ->
+            val request = GET(url, headers)
+            chapterPage += parseImageList(client.newCall(request).execute().asJsoup())
+        }
 
         return chapterPage.mapIndexed { index, url ->
             Page(index, imageUrl = url)
@@ -214,11 +229,9 @@ class MissKon : ConfigurableSource, HttpSource() {
             image.imgAttr()
         }
 
-    override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
+    override fun imageUrlParse(document: Document) = throw UnsupportedOperationException()
 
     /* Filters */
-    private val tagList: MutableMap<String, String> = mutableMapOf()
-
     private val scope = CoroutineScope(Dispatchers.IO)
     private fun launchIO(block: () -> Unit) = scope.launch { block() }
     private var tagsFetched = false
@@ -227,28 +240,56 @@ class MissKon : ConfigurableSource, HttpSource() {
     private fun getTags() {
         launchIO {
             if (!tagsFetched && tagsFetchAttempt < 3) {
-                val result = runCatching {
-                    client.newCall(GET("$baseUrl/sets/", headers))
-                        .execute().asJsoup()
-                        .select(".entry .tag-counterz a[href*=/tag/]")
-                        .mapNotNull {
-                            Pair(
-                                it.select("strong").text(),
-                                it.attr("href")
-                                    .removeSuffix("/")
-                                    .substringAfterLast('/'),
-                            )
+                try {
+                    client.newCall(GET("$baseUrl/sets/", headers)).execute()
+                        .use { response ->
+                            response.asJsoup()
+                                .select(".entry .tag-counterz a[href*=/tag/]")
+                                .mapNotNull {
+                                    Pair(
+                                        it.select("strong").text(),
+                                        it.attr("href")
+                                            .removeSuffix("/")
+                                            .substringAfterLast('/'),
+                                    )
+                                }
                         }
+                        .onEach {
+                            tagList = tagList.plus(it)
+                        }
+                        .also {
+                            tagsFetched = true
+                        }
+                } catch (_: Exception) {
+                } finally {
+                    tagsFetchAttempt++
                 }
-                if (result.isSuccess) {
-                    tagList["<Select>"] = ""
-                    tagList.putAll(result.getOrNull() ?: emptyList())
-                    tagsFetched = true
-                }
-                tagsFetchAttempt++
             }
         }
     }
+
+    private var tagList: Set<Pair<String, String>> = loadTagListFromPreferences()
+        set(value) {
+            preferences.edit().putString(
+                TAG_LIST_PREF,
+                value.joinToString("%") { "${it.first}|${it.second}" },
+            ).apply()
+            field = value
+        }
+
+    private fun loadTagListFromPreferences(): Set<Pair<String, String>> =
+        preferences.getString(TAG_LIST_PREF, "")
+            ?.let {
+                it.split('%').mapNotNull { tag ->
+                    tag.split('|')
+                        .let { splits ->
+                            if (splits.size == 2) Pair(splits[0], splits[1]) else null
+                        }
+                }
+            }
+            ?.toSet()
+            // Load default tags
+            .let { if (it.isNullOrEmpty()) TagList else it }
 
     override fun getFilterList(): FilterList {
         getTags()
@@ -257,24 +298,31 @@ class MissKon : ConfigurableSource, HttpSource() {
             if (tagList.isEmpty()) {
                 Filter.Header("Hit refresh to load Tags")
             } else {
-                TagsFilter("Tag", tagList.toList())
+                TagsFilter("Browse Tag", tagList.toList())
             },
         )
     }
 
     private fun Element.imgAttr(): String {
         return when {
-            hasAttr("data-original") -> attr("abs:data-original")
-            hasAttr("data-src") -> attr("abs:data-src")
-            hasAttr("data-bg") -> attr("abs:data-bg")
-            hasAttr("data-srcset") -> attr("abs:data-srcset")
-            hasAttr("data-srcset") -> attr("abs:data-srcset")
-            else -> attr("abs:src")
+            hasAttr("data-original") -> absUrl("data-original")
+            hasAttr("data-src") -> absUrl("data-src")
+            hasAttr("data-bg") -> absUrl("data-bg")
+            hasAttr("data-srcset") -> absUrl("data-srcset")
+            hasAttr("data-srcset") -> absUrl("data-srcset")
+            else -> absUrl("src")
         }
     }
 
     companion object {
         private const val PREF_TOP_DAYS = "pref_top_days"
         private const val DEFAULT_TOP_DAYS = "1"
+
+        private val FULL_DATE_REGEX = Regex("""/(\d{4}/\d{2}/\d{2})/""")
+        private val YEAR_MONTH_REGEX = Regex("""/(\d{4}/\d{2})/""")
+
+        private val FULL_DATE_FORMAT = SimpleDateFormat("yyyy/MM/dd", Locale.US)
+
+        private const val TAG_LIST_PREF = "TAG_LIST"
     }
 }
