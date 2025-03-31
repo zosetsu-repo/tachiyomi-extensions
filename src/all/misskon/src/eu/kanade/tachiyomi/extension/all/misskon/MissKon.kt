@@ -3,8 +3,6 @@ package eu.kanade.tachiyomi.extension.all.misskon
 import android.content.SharedPreferences
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
-import eu.kanade.tachiyomi.lib.randomua.UserAgentType
-import eu.kanade.tachiyomi.lib.randomua.setRandomUserAgent
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.interceptor.rateLimitHost
 import eu.kanade.tachiyomi.source.ConfigurableSource
@@ -13,6 +11,7 @@ import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.source.online.ParsedHttpSource
 import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.utils.getPreferencesLazy
@@ -39,7 +38,6 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
 
     override val client = network.cloudflareClient.newBuilder()
         .rateLimitHost(baseUrl.toHttpUrl(), 10, 1, TimeUnit.SECONDS)
-        .setRandomUserAgent(UserAgentType.MOBILE)
         .build()
 
     override fun headersBuilder() = super.headersBuilder()
@@ -72,6 +70,7 @@ class MissKon : ConfigurableSource, ParsedHttpSource() {
             val meta = element.selectFirst("p.post-meta")
             description = "View: ${meta?.select("span.post-views")?.text() ?: "---"}"
             genre = meta?.parseTags()
+            update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
         }
 
     override fun popularMangaRequest(page: Int): Request {
