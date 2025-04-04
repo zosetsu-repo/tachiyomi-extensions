@@ -289,7 +289,7 @@ open class BatoTo(
         manga.title = infoElement.select("h3").text().removeEntities()
         manga.thumbnail_url = document.select("div.attr-cover img")
             .attr("abs:src")
-        manga.url = infoElement.select("h3 a").attr("abs:href")
+        manga.setUrlWithoutDomain(infoElement.select("h3 a").attr("abs:href"))
         return MangasPage(listOf(manga), false)
     }
 
@@ -414,7 +414,7 @@ open class BatoTo(
         return Jsoup.parse(response.body.string(), response.request.url.toString(), Parser.xmlParser())
             .select("channel > item").map { item ->
                 SChapter.create().apply {
-                    url = item.selectFirst("guid")!!.text()
+                    setUrlWithoutDomain(item.selectFirst("guid")!!.text())
                     name = item.selectFirst("title")!!.text()
                     date_upload = parseAltChapterDate(item.selectFirst("pubDate")!!.text())
                 }
