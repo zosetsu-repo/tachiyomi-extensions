@@ -3,40 +3,51 @@
 | [![Build](https://github.com/zosetsu-repo/tachiyomi-extensions/actions/workflows/build_push.yml/badge.svg)](https://github.com/zosetsu-repo/tachiyomi-extensions/actions/workflows/build_push.yml) | [![Updated](https://img.shields.io/github/actions/workflow/status/zosetsu-repo/tachiyomi-extensions/auto_cherry_pick.yml?label=Updated&labelColor=27303D)](https://github.com/zosetsu-repo/tachiyomi-extensions/actions/workflows/auto_cherry_pick.yml) | [![Install](https://img.shields.io/badge/Click%20here%20to%20install%20repo-gray?style=flat&labelColor=red)](https://intradeus.github.io/http-protocol-redirector/?r=tachiyomi://add-repo?url=https://raw.githubusercontent.com/zosetsu-repo/tachi-repo/repo/index.min.json) |
 
 # Komikku / Mihon / Tachiyomi Extensions
+
 This repository contains extension catalogues which are compatible with [Komikku](https://github.com/komikku-app/komikku) and Mihon / Tachiyomi or other forks.
 
 This repository automatically merges any updates from [Keiyoushi](https://github.com/keiyoushi/extensions-source) every 6 hours to have the best of community contributions. Beside from that, it has a few of my developed extensions or some improvements. Enjoy!
 
 Some extensions from this repo provide better support for Komikku's feature showing related titles.
 
-# Recommend App
+## Recommend App
 
 ### [Komikku](https://github.com/komikku-app/komikku)
+
 ### [Mihon](https://github.com/mihonapp/mihon)
-### [TachiyomiSY](https://github.com/jobobby04/TachiyomiSY)
-### [Tachiyomi](https://github.com/tachiyomiorg/TachiyomiSY)
 
-# How to add the repo
-This repo include all previously existed source from Tachiyomi before the removal.
+## How to add the repo
 
-## One-click installation
+[Click here to add repo](https://zosetsu-repo.github.io/add-repo)
+
+Or Copy Paste this repo url:
+
+```html
+https://raw.githubusercontent.com/zosetsu-repo/tachi-repo/repo/index.min.json
+```
+
+[More Info](https://zosetsu-repo.github.io/docs/guides/getting-started#adding-the-extension-repo)
+
+### One-click installation
+
 One-click installation is only supported by these Tachiyomi versions:
+
 * Komikku
 * Tachiyomi v0.15.2+
-* Tachiyomi Preview r6404+
 * TachiyomiSY v1.10.0+
-* TachiyomiSY Preview r539+
 * Aniyomi Preview r7443+
 
 Navigate to [the website](https://zosetsu-repo.github.io/) and tap "Add to Tachiyomi", then restart the app.
 
-## TachiyomiAZ
+### TachiyomiAZ
+
 1. Go to Settings → Browse
 2. Tap on "Edit repos" and then "+" button at bottom
 3. Input zosetsu-repo/tachi-repo
 4. Enjoy!
 
-## Manually
+### Manually
+
 External repositories add additional sources to **Komikku**. You can add external repositories by going to **More** -> **Settings** -> **Browse** and tapping **Extension repos**.
 
 Once there, you can add repositories by inputting this URL:
@@ -51,11 +62,11 @@ You can now tap the download button next to extensions to install them.
 
 > You may need to [enable third-party installations](https://komikku-app.github.io/docs/faq/browse/extensions#enabling-third-party-installations).
 
-## Others
+### Others
+
 If you're not using any of the above fork then manually download and update extensions from the [listing page](https://zosetsu-repo.github.io/extensions/)
 
-
-# Usage
+## Usage
 
 [Getting started](https://zosetsu-repo.github.io/docs/guides/getting-started#adding-the-extension-repo)
 
@@ -88,25 +99,25 @@ It might also be good to read our [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
 
 ## License
 
-    Copyright 2015 Javier Tomás
+Copyright 2015 Javier Tomás
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 ## Disclaimer
 
 This project does not have any affiliation with the content providers available.
 
-This project is not affiliated with Mihon/Tachiyomi. Don't ask for help about these extensions at the
-official support means of Mihon/Tachiyomi. All credits to the codebase goes to the original contributors.
+This project is not affiliated with Komikku/Mihon/Tachiyomi. Don't ask for help about these extensions at the
+official support means of Komikku/Mihon/Tachiyomi. All credits to the codebase goes to the original contributors.
 
 The developer of this application does not have any affiliation with the content providers available.
