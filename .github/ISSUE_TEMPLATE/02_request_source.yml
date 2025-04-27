@@ -45,7 +45,7 @@ body:
       label: Acknowledgements
       description: Your issue will be closed if you haven't done these steps.
       options:
-        - label: I have checked that the extension does not already exist by searching the [extension listing](https://zosetsu-repo.github.io/extensions/) and verified it does not appear there.
+        - label: I have checked that the extension does not already exist by searching the [extension listing](https://yuzono.github.io/extensions/) and verified it does not appear there.
           required: true
         - label: I have searched the existing issues and this is a new ticket, **NOT** a duplicate or related to another open or closed issue.
           required: true
@@ -64,4 +64,4 @@ body:
         Add a :+1: [reaction] to [issues you find important].
 
         [reaction]: https://github.blog/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/
-        [issues you find important]: https://github.com/zosetsu-repo/tachiyomi-extensions/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc
+        [issues you find important]: https://github.com/yuzono/tachiyomi-extensions/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc

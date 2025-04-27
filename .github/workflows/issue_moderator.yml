@@ -20,7 +20,7 @@ jobs:
             [
               {
                 "keywords": ["cf", "cloudflare"],
-                "message": "Refer to the **Solving Cloudflare issues** section at https://zosetsu-repo.github.io/docs/guides/troubleshooting#cloudflare. If it doesn't work, migrate to other sources or wait until they lower their protection."
+                "message": "Refer to the **Solving Cloudflare issues** section at https://yuzono.github.io/docs/guides/troubleshooting#cloudflare. If it doesn't work, migrate to other sources or wait until they lower their protection."
               },
               {
                 "keywords": ["uninstall"],
@@ -35,7 +35,7 @@ jobs:
           existing-check-enabled: true
           existing-check-labels: |
             ["Source request", "Domain changed"]
-          existing-check-repo-url: https://raw.githubusercontent.com/zosetsu-repo/tachi-repo/repo/index.min.json
+          existing-check-repo-url: https://raw.githubusercontent.com/yuzono/manga-repo/repo/index.min.json
 
           auto-close-rules: |
             [
@@ -44,7 +44,7 @@ jobs:
                 "regex": ".*(?:fail(?:ed|ure|s)?|can\\s*(?:no|')?t|(?:not|un).*able|(?<!n[o']?t )blocked by|error) (?:to )?(?:get past|by ?pass|penetrate)?.*cl[oa]ud ?fl?[ai]re.*",
                 "ignoreCase": true,
                 "labels": ["Cloudflare protected"],
-                "message": "Refer to the **Solving Cloudflare issues** section at https://zosetsu-repo.github.io/docs/guides/troubleshooting#cloudflare. If it doesn't work, migrate to other sources or wait until they lower their protection."
+                "message": "Refer to the **Solving Cloudflare issues** section at https://yuzono.github.io/docs/guides/troubleshooting#cloudflare. If it doesn't work, migrate to other sources or wait until they lower their protection."
               },
               {
                 "type": "both",
