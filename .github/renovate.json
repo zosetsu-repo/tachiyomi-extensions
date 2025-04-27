@@ -1,8 +1,9 @@
 {
   "labels": ["Dependencies"],
   "rebaseWhen": "conflicted",
+  "automerge": true,
+  "semanticCommits": "enabled",
   "extends": [
-    ":semanticCommits",
     "config:best-practices"
   ],
   "schedule": ["on sunday"],
