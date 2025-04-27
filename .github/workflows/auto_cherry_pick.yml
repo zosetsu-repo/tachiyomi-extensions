@@ -28,7 +28,6 @@ jobs:
           ref: master
           path: master
           fetch-depth: 100
-          token: ${{ secrets.BOT_PAT }}
 
       - name: Cherry-picking
         run: |
