@@ -8,7 +8,7 @@ This repository contains extension catalogues which are compatible with [Komikku
 
 This repository automatically merges any updates from [Keiyoushi](https://github.com/keiyoushi/extensions-source) every 6 hours to have the best of community contributions. Beside from that, it has a few of my developed extensions or some improvements. Enjoy!
 
-Some extensions from this repo provide better support for Komikku's feature showing related titles.
+Some extensions from this repo provide better support for Komikku's `Suggestions` feature.
 
 ## Recommend App
 
@@ -18,63 +18,14 @@ Some extensions from this repo provide better support for Komikku's feature show
 
 ## How to add the repo
 
-[Click here to add repo](https://yuzono.github.io/add-repo)
+**If you are new to repository/extensions, please read the [Yūzōnō Getting Started guide](https://yuzono.github.io/docs/guides/getting-started#adding-the-extension-repo) first.**
 
-Or Copy Paste this repo url:
-
-```html
-https://raw.githubusercontent.com/yuzono/manga-repo/repo/index.min.json
-```
-
-[More Info](https://yuzono.github.io/docs/guides/getting-started#adding-the-extension-repo)
-
-### One-click installation
-
-One-click installation is only supported by these Tachiyomi versions:
-
-* Komikku
-* Tachiyomi v0.15.2+
-* TachiyomiSY v1.10.0+
-* Aniyomi Preview r7443+
-
-Navigate to [the website](https://yuzono.github.io/) and tap "Add to Tachiyomi", then restart the app.
-
-### TachiyomiAZ
-
-1. Go to Settings → Browse
-2. Tap on "Edit repos" and then "+" button at bottom
-3. Input yuzono/manga-repo
-4. Enjoy!
-
-### Manually
-
-External repositories add additional sources to **Komikku**. You can add external repositories by going to **More** -> **Settings** -> **Browse** and tapping **Extension repos**.
-
-Once there, you can add repositories by inputting this URL:
+* You can add our repo by visiting the [Yūzōnō Website](https://yuzono.github.io/add-repo)
+* Otherwise, copy & paste the following URL:
 
 ```html
 https://raw.githubusercontent.com/yuzono/manga-repo/repo/index.min.json
 ```
-
-Once you've added a repository, go to Browse -> Extensions and refresh the extensions list.
-
-You can now tap the download button next to extensions to install them.
-
-> You may need to [enable third-party installations](https://komikku-app.github.io/docs/faq/browse/extensions#enabling-third-party-installations).
-
-### Others
-
-If you're not using any of the above fork then manually download and update extensions from the [listing page](https://yuzono.github.io/extensions/)
-
-## Usage
-
-[Getting started](https://yuzono.github.io/docs/guides/getting-started#adding-the-extension-repo)
-
-Extension sources can be downloaded, installed, and uninstalled via the main Komikku app. They are installed and uninstalled like regular apps, in `.apk` format.
-
-## Downloads
-
-If you prefer to directly download the APK files, they are available via https://yuzono.github.io/extensions/ or directly in this GitHub repository in the [`repo` branch](https://github.com/yuzono/manga-repo/tree/repo/apk).
 
 # Requests
 
